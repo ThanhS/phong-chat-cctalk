@@ -369,8 +369,13 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(Number(TOKEN_PORT), '0.0.0.0', () => {
-  console.log(`cctalk-token-server đang chạy ở cổng ${TOKEN_PORT}`);
+// Cổng lắng nghe: Render (và các PaaS khác) cấp cổng qua biến PORT —
+// máy chủ PHẢI nghe đúng cổng đó thì Render mới kiểm tra sức khỏe (/health)
+// được. Khi chạy local/Docker (không có PORT) thì dùng TOKEN_PORT (3001).
+const LISTEN_PORT = Number(process.env.PORT || TOKEN_PORT);
+
+server.listen(LISTEN_PORT, '0.0.0.0', () => {
+  console.log(`cctalk-token-server đang chạy ở cổng ${LISTEN_PORT}`);
   console.log(`LiveKit URL trả cho client: ${LIVEKIT_URL}`);
   console.log(`Đăng nhập phía máy chủ: BẬT (session hạn ${SESSION_TTL})${LEGACY_TOKEN ? ' + chế độ legacy /token đang BẬT' : ''}`);
   console.log(`Phòng: ${Object.values(ROOM_LABELS).join(' | ')}`);

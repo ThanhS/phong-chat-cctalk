@@ -96,8 +96,13 @@ trường nên không mất). Hàng đợi mic và Lô Tô **chưa** đồng b�
 (vẫn chạy local từng máy).
 
 Test: `node test-ws.mjs` — tự khởi động server test ở cổng 3102, kiểm tra
-16 mục (auth, chat 2 chiều, lịch sử, presence, tạo phòng, quyền, /token
-phòng mới) rồi tắt server và dọn data test.
+18 mục (auth, chat 2 chiều, lịch sử, presence, bot 35/phòng + bot tự chat,
+tạo phòng, quyền, /token phòng mới) rồi tắt server và dọn data test.
+
+Mỗi phòng mặc định có sẵn 35 bot (tên + giới tính cố định theo seed) luôn
+online và tự chat mỗi ~10s/phòng — bot có mặt trong presence và lịch sử
+như người thường, chỉ khác là có thêm trường `bot: true` + `gender` để
+trang hiển thị tag BOT.
 
 ## Chạy thử trên máy mình (chưa cần VPS)
 

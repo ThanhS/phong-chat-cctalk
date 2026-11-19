@@ -96,8 +96,9 @@ async function main() {
       b.ws.send(JSON.stringify({ type: 'join', room: '208' }));
       const stateA = await waitFor(a.msgs, (m) => m.type === 'room-state');
       check('vào phòng 208 nhận room-state', !!stateA && stateA.room === 'giao-luu-ket-ban');
-      const presB = await waitFor(b.msgs, (m) => m.type === 'presence' && m.members.length === 2);
-      check('presence thấy đủ 2 người', !!presB, JSON.stringify(b.msgs.filter((m) => m.type === 'presence').slice(-1)));
+      const presB = await waitFor(b.msgs, (m) => m.type === 'presence' && m.members.filter((x) => !x.bot).length === 2);
+      check('presence thấy đủ 2 người thật', !!presB, JSON.stringify(b.msgs.filter((m) => m.type === 'presence').slice(-1)));
+      check('presence có 35 bot cho đông vui', !!presB && presB.members.filter((x) => x.bot).length === 35, `bots=${presB ? presB.members.filter((x) => x.bot).length : '?'}`);
 
       // 3. Admin nhắn -> test001 nhận.
       a.ws.send(JSON.stringify({ type: 'message', room: '208', text: 'xin chào từ admin' }));
@@ -113,6 +114,10 @@ async function main() {
       c.ws.send(JSON.stringify({ type: 'join', room: '208' }));
       const stateC = await waitFor(c.msgs, (m) => m.type === 'room-state');
       check('người vào sau nhận lịch sử chat', !!stateC && stateC.messages.some((m) => m.text === 'xin chào từ admin'));
+
+      // 4b. Bot tự chat: trong ~20s phải thấy tin bot ở phòng 208.
+      const botMsg = await waitFor(b.msgs, (m) => m.type === 'message' && m.msg?.bot === true, 20000);
+      check('bot tự chat (có tag bot)', !!botMsg, JSON.stringify(botMsg?.msg));
 
       // 5. Member tạo phòng -> bị từ chối; admin tạo -> mọi người nhận rooms mới.
       b.ws.send(JSON.stringify({ type: 'create-room', name: 'Phòng Test' }));
@@ -131,7 +136,7 @@ async function main() {
 
       // 7. Rời phòng -> presence cập nhật (208 còn lại test002).
       b.ws.close();
-      const presC = await waitFor(c.msgs, (m) => m.type === 'presence' && m.members.length === 1 && m.members[0].id === 'test002', 5000);
+      const presC = await waitFor(c.msgs, (m) => m.type === 'presence' && m.members.filter((x) => !x.bot).length === 1 && m.members.find((x) => !x.bot)?.id === 'test002', 5000);
       check('rời phòng cập nhật presence', !!presC, JSON.stringify(c.msgs.filter((m) => m.type === 'presence').slice(-1)));
 
       // 8. /token cho phòng tự tạo vẫn chạy (voice).

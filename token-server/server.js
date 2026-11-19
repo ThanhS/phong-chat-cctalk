@@ -259,7 +259,8 @@ async function issueToken({ room, identity, name, rank }) {
 //     {type:'rooms', rooms:[{room,label,id}]}            — danh sách phòng đầy đủ
 //     {type:'room-state', room, label, members, messages} — khi vào phòng (50 tin gần nhất)
 //     {type:'message', room, msg:{id,userId,name,rank,text,time}}
-//     {type:'presence', room, members:[{id,name,rank}]}
+//     {type:'presence', room, members:[{id,name,rank}]} — gồm cả bot {id,name,rank,gender,bot:true}
+//     tin nhắn bot có thêm bot:true + gender; bot tự nói mỗi ~10s/phòng
 //     {type:'room-created', room, label, id}
 //     {type:'room-closed', room}         — phòng đang ở bị xóa, client tự chuyển về Đại Sảnh
 //     {type:'error', code, message}
@@ -296,8 +297,80 @@ function membersMapOf(roomName) {
   if (!roomMembers.has(roomName)) roomMembers.set(roomName, new Map());
   return roomMembers.get(roomName);
 }
+// ---- Bot cho đông vui ------------------------------------------------------
+// Mỗi phòng mặc định có sẵn 35 bot (tên + giới tính cố định theo seed nên
+// lần restart nào cũng giống nhau). Bot luôn "online" và tự chat mỗi ~10s
+// một phòng, để phòng lúc nào cũng đông vui dù chưa có người thật.
+// Bot có mặt trong presence và room-state như người thường, chỉ khác là
+// có thêm trường bot:true + gender để trang hiển thị tag BOT.
+const BOTS_PER_ROOM = 35;
+const BOT_CHAT_INTERVAL_MS = 10_000;
+const BOT_MALE_NAMES = [
+  'Ken_Ken', 'Sói Cô Đơn', 'Út Cưng', 'Đạt 09', 'Cọp Giấy', 'Bảo',
+  'Tèo Em', 'Minh Tuấn Pro', 'Tuấn Anh 2k3', 'Phong Lữ Hành', 'Anh Tài Xế',
+  'Gấu Bông', 'Hạt Dẻ Cười', 'Đạt 2k7', 'Cọp Con', 'Bé Bự', 'Anh Hai',
+  'Tí Hon', 'Cu Tí', 'Bờm', 'Sói Đêm', 'Kẻ Cô Đơn', 'Anh Ba', 'Bé Ba',
+  'Lộc Vàng', 'Tèo', 'Củ Khoai', 'Bé Mập', 'Anh Tư', 'Chú Cuội', 'Bé Na',
+  'Khỉ Con', 'Voi Con', 'Cọp Vằn', 'Sói Trắng', 'Anh Năm',
+];
+const BOT_FEMALE_NAMES = [
+  'Hồng Nhung', 'Mèo Ú', 'Bé Heo', 'Nắng Vàng', 'Hoa Hồng', 'Bé Bông',
+  'Chị Google', 'Cô Ba', 'Bé Tư', 'Mây Trắng', 'Nắng Mai', 'Hoa Sen',
+  'Bé Xinh', 'Chị Hai', 'Cô Tư', 'Bé Nhỏ', 'Mèo Con', 'Thỏ Trắng',
+  'Gấu Trúc', 'Bướm Vàng', 'Hoa Đào', 'Bé Miu', 'Cô Gái', 'Nàng Thơ',
+  'Bé Bắp', 'Hoa Cúc', 'Bé Dâu', 'Mèo Mun', 'Thỏ Ngọc', 'Bé Kem',
+  'Cô Bé', 'Nắng Hồng', 'Bé Sữa', 'Hoa Lan', 'Bé Su', 'Mèo Lười',
+];
+const BOT_CHAT_LINES = [
+  'chào cả nhà!', 'hôm nay phòng đông vui ghê', 'ai còn slot không cho mình ké với',
+  'cho e xin cái áo', 'cảm ơn BĐH, mình làm được rồi', 'ai lên mic hát một bài đi',
+  'phòng này đông vui ghê', 'mọi người đang làm gì đó', 'cho mình xin slot mic với',
+  'tuyển thêm 6k7k c27 p269 mk1 co mic', 'kèo này thơm nè mọi người',
+  'đang cần 1 bạn có mic, nói chuyện vui vẻ', 'c13 p298 mk298 6k> có mic k trẻ trâu',
+  'ai rảnh ghép team không', 'hôm nay vui quá đi', 'BĐH ơi cho em lên mic với',
+  'phòng này toàn người vui tính', 'ai biết hát thì lên mic đi',
+  'mình mới vào, chào mọi người', 'đông vui quá, ở lại luôn',
+  'cho xin 1 slot ghép team', 'ai còn mic không, cho ké',
+  'hôm nay ca hát tới sáng luôn', 'mọi người ơi, cuối tuần vui vẻ nha',
+  'phòng này lúc nào cũng đông', 'ai muốn ghép đôi không nè',
+  'lên mic tâm sự đi mọi người', 'chào buổi tối cả nhà', 'đang nghe nhạc hay quá',
+];
+
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function shuffled(arr, rand) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function buildBotRoster(roomName, seed) {
+  const rand = mulberry32(seed);
+  const males = shuffled(BOT_MALE_NAMES, rand).slice(0, 18);
+  const females = shuffled(BOT_FEMALE_NAMES, rand).slice(0, 17);
+  return [
+    ...males.map((name) => ({ name, gender: 'male' })),
+    ...females.map((name) => ({ name, gender: 'female' })),
+  ].map(({ name, gender }, i) => ({
+    id: `bot-${roomName}-${String(i + 1).padStart(2, '0')}`,
+    name, gender, rank: 'member', bot: true,
+  }));
+}
+const botRosters = new Map(
+  DEFAULT_ROOM_ORDER.map((room) => [room, buildBotRoster(room, DEFAULT_ROOM_IDS[room])]),
+);
+function botsOf(roomName) { return botRosters.get(roomName) || []; }
 function membersOf(roomName) {
-  return [...membersMapOf(roomName).values()].map(({ id, name, rank }) => ({ id, name, rank }));
+  const real = [...membersMapOf(roomName).values()].map(({ id, name, rank }) => ({ id, name, rank }));
+  return [...real, ...botsOf(roomName)];
 }
 function allRooms() {
   const list = DEFAULT_ROOM_ORDER.map((room) => ({ room, label: ROOM_LABELS[room], id: DEFAULT_ROOM_IDS[room] }));
@@ -448,6 +521,24 @@ wss.on('connection', (ws) => {
   ws.on('close', () => { clearTimeout(authTimer); wsLeaveRoom(ws); });
   ws.on('error', () => { /* socket lỗi: close sẽ dọn dẹp */ });
 });
+
+// Bot tự chat: mỗi phòng một timer ~10s, bot ngẫu nhiên nói một câu ngẫu nhiên.
+function botChatTick(roomName) {
+  const bots = botsOf(roomName);
+  if (!bots.length) return;
+  const bot = bots[Math.floor(Math.random() * bots.length)];
+  const text = BOT_CHAT_LINES[Math.floor(Math.random() * BOT_CHAT_LINES.length)];
+  const now = Date.now();
+  const chatMsg = { id: nextMsgId(), userId: bot.id, name: bot.name, rank: 'member', text, time: new Date(now).toISOString(), bot: true, gender: bot.gender };
+  const hist = messagesOf(roomName);
+  hist.push(chatMsg);
+  if (hist.length > WS_HISTORY) hist.splice(0, hist.length - WS_HISTORY);
+  wsBroadcast(roomName, { type: 'message', room: roomName, msg: chatMsg });
+}
+for (const roomName of DEFAULT_ROOM_ORDER) {
+  const t = setInterval(() => botChatTick(roomName), BOT_CHAT_INTERVAL_MS);
+  if (t.unref) t.unref();
+}
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');

@@ -417,6 +417,14 @@
       /* Panel cài đặt máy chủ voice LiveKit */
       .lk-panel{display:none;border-top:1px solid var(--line);background:var(--panel-2);padding:.6rem .9rem .75rem;}
       .lk-panel.show{display:block;}
+      /* Ẩn hẳn giao diện máy chủ voice theo yêu cầu: không hiện nút
+         “Máy chủ voice”, không mở panel cài đặt, không hiện dòng trạng
+         thái máy chủ voice — voice PeerJS vẫn tự nối ở nền như cũ.
+         Dòng thông báo hệ thống (.sys) trong khung chat cũng ẩn hẳn. */
+      #lkBtn{display:none!important;}
+      .lk-panel{display:none!important;}
+      #lkNote{display:none!important;}
+      .sys{display:none!important;}
       .lk-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.45rem;}
       .lk-row label{font-weight:700;font-size:.85rem;min-width:168px;}
       .lk-input{flex:1;min-width:200px;padding:.45rem .6rem;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font-size:.88rem;font-family:inherit;}
@@ -861,7 +869,7 @@
             </div>
             <div class="talk-mode" role="group" aria-label="Chế độ nói chuyện">
               <button id="tmPtt" type="button" class="sel" title="Như ccTalk gốc: giữ phím F2 hoặc giữ nút mic để nói, thả ra là gửi đoạn thoại">Giữ F2 để nói</button>
-              <button id="tmFree" type="button" title="Mở mic tự do: bấm nút mic 1 lần để mở mic, nói thoải mái không cần giữ F2 — ngừng nói khoảng 1,4 giây là đoạn thoại tự gửi vào phòng">Nói tự do</button>
+              <button id="tmFree" type="button" title="Nói tự do: chọn nút này là mic tự mở ngay, nói thoải mái không cần giữ F2 và không cần bấm thêm nút mic — ngừng nói khoảng 1,4 giây là đoạn thoại tự gửi vào phòng">Nói tự do</button>
             </div>
             <button class="ptt" id="pttBtn">
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M6 9h.8M10 9h.8M14 9h.8M18 9h.8M6 13h.8M18 13h.8M9 13h6"/></svg>
@@ -1388,7 +1396,8 @@
       /* ================= Render: messages ================= */
       function msgHTML(m){
         if(m.type==="sys"){
-          return '<div class="sys"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-1.2 5.5h2.4V10h-2.4V8.5Zm0 3h2.4V17h-2.4v-5.5Z"/></svg><span>'+esc(m.text)+"</span></div>";
+          /* Dòng thông báo hệ thống: không hiển thị trong khung chat nữa */
+          return "";
         }
         if(m.type==="announce"){
           return '<div class="announce"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10v4a1 1 0 0 0 1 1h2l4 4.5c.8.9 2 .3 2-.9V5.3c0-1.2-1.2-1.8-2-.9L6 9H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg><span>'+esc(m.text)+"</span></div>";
@@ -1448,7 +1457,9 @@
           renderRoomList();
         }
       }
-      function sysHere(text){ addMessage(state.roomId, {type:"sys", text:text}); }
+      /* Thông báo hệ thống không hiển thị nữa — giữ hàm rỗng để mọi chỗ
+         gọi cũ (vào/ra phòng, nối voice, xếp hàng, lô tô...) không lỗi */
+      function sysHere(text){}
       /* Thông báo IN ĐẬM nổi bật trong khung chat — mọi user đều thấy rõ */
       function announceHere(text){ addMessage(state.roomId, {type:"announce", text:text}); }
 
@@ -1553,7 +1564,7 @@
         updateOnline();
         toast(isAdmin()
           ? "Chào Admin " + acc.name + "! Bút chì ở đầu trang sửa PHÒNG chính, bút chì ở cột trái sửa từng SẢNH — hai tên độc lập nhau."
-          : "Chào " + acc.name + "! Nói chuyện có 2 cách: giữ F2 / giữ nút mic để nói, hoặc chọn “Nói tự do” rồi bấm nút mic 1 lần để mở mic thật — nói không cần giữ phím.");
+          : "Chào " + acc.name + "! Nói chuyện có 2 cách: giữ F2 / giữ nút mic để nói, hoặc chọn “Nói tự do” là mic tự mở ngay — nói không cần giữ phím.");
         startBots();
         lkAutoConnect();
         $("chatInput").focus();
@@ -2561,7 +2572,12 @@
         }
       }
       function setTalkMode(mode){
-        if(state.talkMode===mode) { updatePttLabel(); return; }
+        if(state.talkMode===mode) {
+          /* Đang ở “Nói tự do” mà mic chưa mở (ví dụ trước đó bị chặn
+             quyền nói) thì bấm lại là mở mic luôn */
+          if(mode==="free" && !state.freeOn && !talkBlockReason()) setFreeTalk(true);
+          updatePttLabel(); return;
+        }
         if(state.freeOn) setFreeTalk(false);
         if(state.talking) stopTalk();
         state.talkMode = mode;
@@ -2569,9 +2585,19 @@
         if(bp) bp.classList.toggle("sel", mode==="ptt");
         if(bf) bf.classList.toggle("sel", mode==="free");
         updatePttLabel();
-        toast(mode==="free"
-          ? "Đã chuyển sang NÓI TỰ DO — bấm nút mic 1 lần để mở mic thật, nói không cần giữ F2"
-          : "Đã chuyển sang GIỮ F2 — giữ phím F2 hoặc giữ nút mic để nói, thả ra để gửi");
+        if(mode==="free"){
+          /* Chọn “Nói tự do” là mic TỰ MỞ ngay — không cần bấm thêm
+             nút mic màu xanh nữa. Nếu đang bị chặn quyền nói (cấm mic /
+             chỉ BĐH nói / chưa lên mic khi xếp hàng) thì mic chưa mở,
+             được phép nói lúc nào trang tự mở lúc đó. */
+          if(!talkBlockReason()){
+            setFreeTalk(true);
+          } else {
+            toast("Đã chuyển sang NÓI TỰ DO — được phép nói là mic tự mở, nói không cần giữ F2");
+          }
+        } else {
+          toast("Đã chuyển sang GIỮ F2 — giữ phím F2 hoặc giữ nút mic để nói, thả ra để gửi");
+        }
       }
       $("tmPtt").addEventListener("click", function(){ setTalkMode("ptt"); });
       $("tmFree").addEventListener("click", function(){ setTalkMode("free"); });
@@ -4034,6 +4060,9 @@
         if(state.mode==="free") sysHere("Hiện tại chế độ trò chuyện của phòng là tự do trò chuyện, bạn có thể tự do trò chuyện");
         if(state.mode==="queue") sysHere("Phòng chuyển sang chế độ xếp hàng: bạn có thể nhấn nút \"Xếp hàng\" để xếp hàng — mỗi người lên mic có 120 giây, hết giờ BĐH/Admin (kể cả áo vàng, áo tím) có thể tăng thêm giờ cho bạn");
         if(state.mode==="mod") sysHere("Phòng chuyển sang chế độ chỉ BĐH nói — mic của TẤT CẢ thành viên thường đã bị tắt, chỉ Admin và BĐH (đen, vàng, tím) mới nói được");
+        /* Đang chọn “Nói tự do” mà phòng vừa cho phép nói trở lại thì
+           mic tự mở luôn — không cần bấm thêm nút mic màu xanh */
+        if(state.talkMode==="free" && !state.freeOn && !talkBlockReason()) setFreeTalk(true);
         renderQueue();
         renderRoomList();
         updateBanStateUI();

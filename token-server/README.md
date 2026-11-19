@@ -66,6 +66,39 @@ mic; không còn mảng tài khoản/mật khẩu trong mã nguồn trang.
 Test: `./test-token.sh` (cần đặt `ADMIN_PASSWORD` + `TEST_PASSWORD` đúng
 với lúc gieo tài khoản) — kiểm tra cả đăng nhập sai, giả mạo rank và đăng ký.
 
+## Chat + hiện diện + phòng chung thời gian thực (v3 — mới)
+
+Từ v3, token-server còn là hub WebSocket để 2 máy (điện thoại + PC) thấy
+cùng một phòng chat: cùng tin nhắn, cùng danh sách người đang online, cùng
+phòng mới tạo. Không có hub này, mỗi máy chạy bot demo riêng nên nội dung
+khác nhau.
+
+- Nối: `wss://<host>/ws` (địa chỉ lấy từ ô "Máy chủ đăng nhập" trên trang —
+  đổi `http→ws`, `https→wss`, thêm `/ws`). Tin đầu tiên bắt buộc là
+  `{type:'auth', token}` với session JWT lấy từ `POST /login`; sai/hết hạn
+  hoặc 10s không auth thì bị đóng (4401).
+- Vào phòng: `{type:'join', room}` (`208`/`101`/`102`/`103` hoặc slug) →
+  nhận `{type:'room-state'}` gồm danh sách người đang online + 50 tin gần
+  nhất; mọi người trong phòng nhận `{type:'presence'}` khi có người vào/ra.
+- Gửi chat: `{type:'message', room, text}` (1–500 ký tự, tối đa 1 tin/0.8s)
+  → server phát `{type:'message', room, msg:{id,userId,name,rank,text,time}}`
+  cho mọi người trong phòng (kể cả người gửi).
+- Tạo phòng: `{type:'create-room', name}` — chỉ QTV/BĐH; ID tự tăng từ 104,
+  phòng mới phát cho mọi người qua `{type:'rooms'}` (đồng thời dùng được
+  cho voice qua `POST /token`, room `phong-<id>`). Xóa phòng tự tạo:
+  `{type:'delete-room', room}` — chỉ QTV; người đang ở phòng đó nhận
+  `{type:'room-closed'}`.
+- `GET /health` trả thêm `ws: true`, số `connections` và số `rooms`.
+
+Giới hạn v3: tin nhắn + phòng tự tạo chỉ giữ trong RAM — restart là mất
+(Render gói miễn phí không có ổ đĩa bền; tài khoản thì gieo lại từ biến môi
+trường nên không mất). Hàng đợi mic và Lô Tô **chưa** đồng bộ qua hub này
+(vẫn chạy local từng máy).
+
+Test: `node test-ws.mjs` — tự khởi động server test ở cổng 3102, kiểm tra
+16 mục (auth, chat 2 chiều, lịch sử, presence, tạo phòng, quyền, /token
+phòng mới) rồi tắt server và dọn data test.
+
 ## Chạy thử trên máy mình (chưa cần VPS)
 
 Cần: Docker + Docker Compose (máy test), hoặc chỉ Node 20+ để test riêng token-server.
@@ -230,9 +263,9 @@ await room.localParticipant.setMicrophoneEnabled(true); // khi được nói
 - **Chưa có TURN.** Mạng công ty/trường chặn UDP có thể khiến vài người không
   nghe được. Nếu gặp, bật TURN tích hợp của LiveKit trong `config.yaml`
   (`turn: {enabled: true, udp_port: 3478, tls_port: 5349}`) và mở thêm port đó.
-- **Chỉ voice.** Chat chữ, danh sách phòng, Lô Tô vẫn ở artifact tĩnh; Rivet
-  (skill `rivet-actors`) có thể dùng sau này để làm chat/phòng đồng bộ nhiều
-  máy, không bắt buộc cho voice.
+- **Chat chữ, hiện diện và phòng đã đồng bộ qua hub WebSocket v3** (xem trên).
+  Hàng đợi mic và Lô Tô vẫn chạy local từng máy; Rivet (skill
+  `rivet-actors`) là hướng thay thế nếu sau này muốn đồng bộ nốt 2 phần đó.
 - **Skill `building-livekit-agents` làm về AI voice agent trên LiveKit Cloud.**
   Gói này không dùng AI agent — chỉ dùng LiveKit mã nguồn mở tự host để
   người-với-người nói chuyện với nhau (cùng cơ chế token/signalling).

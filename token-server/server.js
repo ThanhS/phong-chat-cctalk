@@ -19,10 +19,15 @@
 // Chạy:  LIVEKIT_API_KEY=... LIVEKIT_API_SECRET=... SESSION_SECRET=... \
 //        ADMIN_PASSWORD=... BDH_PASSWORD=... TEST_PASSWORD=... node server.js
 // Không dùng framework, chỉ dùng http + crypto có sẵn của Node.
+// V3: thêm hub WebSocket /ws — chat + hiện diện + phòng chung giữa các máy
+// (chi tiết giao thức ở mục "Hub WebSocket" phía dưới). Tin nhắn và phòng
+// tự tạo chỉ giữ trong RAM; restart sẽ mất (Render gói miễn phí không có
+// ổ đĩa bền). Hàng đợi mic và Lô Tô chưa đồng bộ qua hub này.
 
 import http from 'node:http';
 import crypto from 'node:crypto';
 import { AccessToken } from 'livekit-server-sdk';
+import { WebSocketServer } from 'ws';
 import {
   loadUsers, saveUsers, usersFileExists, seedFromEnv,
   hashPassword, verifyPassword, validId, RANKS, MANAGER_RANKS,
@@ -236,6 +241,214 @@ async function issueToken({ room, identity, name, rank }) {
   };
 }
 
+// ---- Hub WebSocket: chat + hiện diện + phòng chung giữa các máy (v3) ------
+// Trang web nối wss://<host>/ws (địa chỉ lấy từ ô "Máy chủ đăng nhập").
+// Mọi tin nhắn chat, danh sách người đang online và phòng mới đều đi qua
+// đây nên 2 máy (điện thoại + PC) thấy giống nhau. Không có máy chủ này,
+// trang chạy chế độ bot demo cũ (mỗi máy tự sinh bot riêng).
+// Giao thức (JSON, 1 message = 1 object):
+//   Client -> Server:
+//     {type:'auth', token}              — bắt buộc đầu tiên (session JWT từ /login)
+//     {type:'join', room}               — vào phòng ('208'/'101'/... hoặc slug)
+//     {type:'message', room, text}      — gửi chat (1-500 ký tự, tối đa 1 tin/0.8s)
+//     {type:'leave', room}              — rời phòng
+//     {type:'create-room', name}        — QTV/BĐH tạo phòng mới
+//     {type:'delete-room', room}        — QTV xóa phòng tự tạo (không xóa 4 phòng mặc định)
+//   Server -> Client:
+//     {type:'auth-ok', user:{id,name,rank}}
+//     {type:'rooms', rooms:[{room,label,id}]}            — danh sách phòng đầy đủ
+//     {type:'room-state', room, label, members, messages} — khi vào phòng (50 tin gần nhất)
+//     {type:'message', room, msg:{id,userId,name,rank,text,time}}
+//     {type:'presence', room, members:[{id,name,rank}]}
+//     {type:'room-created', room, label, id}
+//     {type:'room-closed', room}         — phòng đang ở bị xóa, client tự chuyển về Đại Sảnh
+//     {type:'error', code, message}
+// Trạng thái chỉ giữ trong RAM — Render gói miễn phí không có ổ đĩa bền nên
+// restart sẽ mất tin nhắn + phòng tự tạo (tài khoản thì gieo lại từ biến môi
+// trường). Hàng đợi mic và Lô Tô chưa đồng bộ qua hub này (vẫn chạy local
+// từng máy) — sẽ làm ở bước sau nếu cần.
+
+const WS_AUTH_TIMEOUT_MS = 10_000;
+const WS_MAX_MSG_LEN = 500;
+const WS_MIN_MSG_GAP_MS = 800;
+const WS_HISTORY = 50;
+
+// Phòng tự tạo: slug -> { id, label, createdBy }. ID chạy từ 104.
+const customRooms = new Map();
+let nextRoomId = 104;
+// Tin nhắn theo phòng: roomName -> [{id,userId,name,rank,text,time}]
+const roomMessages = new Map();
+// Người đang online theo phòng: roomName -> Map userId -> {id,name,rank,conns}
+const roomMembers = new Map();
+
+let msgSeq = 0;
+const nextMsgId = () => `m${Date.now().toString(36)}${(msgSeq++).toString(36)}`;
+
+const DEFAULT_ROOM_ORDER = ['giao-luu-ket-ban', 'dai-sanh', 'giao-luu', 'ho-tro'];
+const DEFAULT_ROOM_IDS = { 'giao-luu-ket-ban': 208, 'dai-sanh': 101, 'giao-luu': 102, 'ho-tro': 103 };
+
+function roomLabelOf(roomName) { return ROOM_LABELS[roomName] || roomName; }
+function messagesOf(roomName) {
+  if (!roomMessages.has(roomName)) roomMessages.set(roomName, []);
+  return roomMessages.get(roomName);
+}
+function membersMapOf(roomName) {
+  if (!roomMembers.has(roomName)) roomMembers.set(roomName, new Map());
+  return roomMembers.get(roomName);
+}
+function membersOf(roomName) {
+  return [...membersMapOf(roomName).values()].map(({ id, name, rank }) => ({ id, name, rank }));
+}
+function allRooms() {
+  const list = DEFAULT_ROOM_ORDER.map((room) => ({ room, label: ROOM_LABELS[room], id: DEFAULT_ROOM_IDS[room] }));
+  for (const [room, r] of customRooms) list.push({ room, label: r.label, id: r.id });
+  return list;
+}
+
+function wsSend(ws, obj) {
+  if (ws.readyState === 1) ws.send(JSON.stringify(obj));
+}
+function wsBroadcast(roomName, obj, exceptWs = null) {
+  for (const client of wss.clients) {
+    if (client === exceptWs) continue;
+    if (client.room === roomName && client.user) wsSend(client, obj);
+  }
+}
+function wsBroadcastAll(obj) {
+  for (const client of wss.clients) {
+    if (client.user) wsSend(client, obj);
+  }
+}
+function wsBroadcastPresence(roomName) {
+  wsBroadcast(roomName, { type: 'presence', room: roomName, members: membersOf(roomName) });
+}
+function wsJoinRoom(ws, roomName) {
+  if (ws.room) wsLeaveRoom(ws);
+  ws.room = roomName;
+  const m = membersMapOf(roomName);
+  const e = m.get(ws.user.sub);
+  if (e) e.conns += 1;
+  else m.set(ws.user.sub, { id: ws.user.sub, name: ws.user.name, rank: ws.user.rank, conns: 1 });
+  wsSend(ws, {
+    type: 'room-state', room: roomName, label: roomLabelOf(roomName),
+    members: membersOf(roomName), messages: messagesOf(roomName),
+  });
+  wsBroadcastPresence(roomName);
+}
+function wsLeaveRoom(ws) {
+  if (!ws.room || !ws.user) return;
+  const roomName = ws.room;
+  ws.room = null;
+  const m = membersMapOf(roomName);
+  const e = m.get(ws.user.sub);
+  if (e) {
+    e.conns -= 1;
+    if (e.conns <= 0) m.delete(ws.user.sub);
+  }
+  wsBroadcastPresence(roomName);
+}
+
+const wss = new WebSocketServer({ noServer: true });
+
+wss.on('connection', (ws) => {
+  ws.user = null;
+  ws.room = null;
+  ws.lastMsgAt = 0;
+  const authTimer = setTimeout(() => {
+    if (!ws.user) {
+      wsSend(ws, { type: 'error', code: 'unauthorized', message: 'Chưa đăng nhập (thiếu session).' });
+      ws.close(4401, 'unauthorized');
+    }
+  }, WS_AUTH_TIMEOUT_MS);
+
+  ws.on('message', (data) => {
+    let msg;
+    try { msg = JSON.parse(String(data)); } catch {
+      return wsSend(ws, { type: 'error', code: 'bad-message', message: 'Tin nhắn không phải JSON.' });
+    }
+    if (!msg || typeof msg !== 'object') return;
+
+    // Chưa đăng nhập: chỉ chấp nhận auth.
+    if (!ws.user) {
+      if (msg.type === 'auth') {
+        const session = verifySession(msg.token);
+        if (!session) {
+          wsSend(ws, { type: 'error', code: 'unauthorized', message: 'Session không hợp lệ hoặc đã hết hạn.' });
+          return ws.close(4401, 'unauthorized');
+        }
+        ws.user = session;
+        clearTimeout(authTimer);
+        wsSend(ws, { type: 'auth-ok', user: { id: session.sub, name: session.name, rank: session.rank } });
+        wsSend(ws, { type: 'rooms', rooms: allRooms() });
+      }
+      return;
+    }
+
+    switch (msg.type) {
+      case 'join': {
+        const roomName = ROOMS[String(msg.room ?? '').toLowerCase()];
+        if (!roomName) return wsSend(ws, { type: 'error', code: 'bad-room', message: 'Phòng không hợp lệ.' });
+        wsJoinRoom(ws, roomName);
+        break;
+      }
+      case 'leave': {
+        wsLeaveRoom(ws);
+        break;
+      }
+      case 'message': {
+        const roomName = ROOMS[String(msg.room ?? '').toLowerCase()];
+        if (!roomName || ws.room !== roomName) return wsSend(ws, { type: 'error', code: 'not-in-room', message: 'Bạn chưa vào phòng này.' });
+        const text = String(msg.text ?? '').trim();
+        if (!text || text.length > WS_MAX_MSG_LEN) return wsSend(ws, { type: 'error', code: 'bad-text', message: `Tin nhắn dài 1-${WS_MAX_MSG_LEN} ký tự.` });
+        const now = Date.now();
+        if (now - ws.lastMsgAt < WS_MIN_MSG_GAP_MS) return wsSend(ws, { type: 'error', code: 'rate-limited', message: 'Gửi chậm lại một chút.' });
+        ws.lastMsgAt = now;
+        const chatMsg = { id: nextMsgId(), userId: ws.user.sub, name: ws.user.name, rank: ws.user.rank, text, time: new Date(now).toISOString() };
+        const hist = messagesOf(roomName);
+        hist.push(chatMsg);
+        if (hist.length > WS_HISTORY) hist.splice(0, hist.length - WS_HISTORY);
+        wsBroadcast(roomName, { type: 'message', room: roomName, msg: chatMsg });
+        break;
+      }
+      case 'create-room': {
+        if (!MANAGER_RANKS.has(ws.user.rank)) return wsSend(ws, { type: 'error', code: 'forbidden', message: 'Chỉ QTV/BĐH mới tạo được phòng.' });
+        const name = String(msg.name ?? '').trim().slice(0, 40);
+        if (name.length < 2) return wsSend(ws, { type: 'error', code: 'bad-name', message: 'Tên phòng dài 2-40 ký tự.' });
+        const id = nextRoomId++;
+        const roomName = `phong-${id}`;
+        const label = `${name} (ID ${id})`;
+        customRooms.set(roomName, { id, label, createdBy: ws.user.sub });
+        ROOMS[String(id)] = roomName;
+        ROOMS[roomName] = roomName;
+        ROOM_LABELS[roomName] = label;
+        wsBroadcastAll({ type: 'rooms', rooms: allRooms() });
+        wsSend(ws, { type: 'room-created', room: roomName, label, id });
+        break;
+      }
+      case 'delete-room': {
+        const roomName = ROOMS[String(msg.room ?? '').toLowerCase()];
+        if (!roomName || !customRooms.has(roomName)) return wsSend(ws, { type: 'error', code: 'bad-room', message: 'Chỉ xóa được phòng tự tạo.' });
+        if (ws.user.rank !== 'qtv') return wsSend(ws, { type: 'error', code: 'forbidden', message: 'Chỉ QTV mới xóa được phòng.' });
+        const removed = customRooms.get(roomName);
+        customRooms.delete(roomName);
+        delete ROOMS[String(removed.id)];
+        delete ROOMS[roomName];
+        delete ROOM_LABELS[roomName];
+        roomMessages.delete(roomName);
+        roomMembers.delete(roomName);
+        wsBroadcastAll({ type: 'rooms', rooms: allRooms() });
+        wsBroadcast(roomName, { type: 'room-closed', room: roomName });
+        break;
+      }
+      default:
+        wsSend(ws, { type: 'error', code: 'unknown-type', message: `Không hiểu lệnh: ${msg.type}` });
+    }
+  });
+
+  ws.on('close', () => { clearTimeout(authTimer); wsLeaveRoom(ws); });
+  ws.on('error', () => { /* socket lỗi: close sẽ dọn dẹp */ });
+});
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   if (req.method === 'OPTIONS') return send(res, 204, {});
@@ -247,6 +460,7 @@ const server = http.createServer(async (req, res) => {
         ok: true, service: 'cctalk-token-server', auth: true,
         legacyToken: LEGACY_TOKEN, users: Object.keys(users).length,
         livekitUrl: LIVEKIT_URL, time: new Date().toISOString(),
+        ws: true, connections: wss.clients.size, rooms: allRooms().length,
       });
     }
 
@@ -367,6 +581,13 @@ const server = http.createServer(async (req, res) => {
     console.error(err);
     return send(res, 500, { error: String(err.message || err) });
   }
+});
+
+// Nâng cấp HTTP -> WebSocket cho đường /ws (chat/presence/phòng chung).
+server.on('upgrade', (req, socket, head) => {
+  const url = new URL(req.url, 'http://localhost');
+  if (url.pathname !== '/ws') { socket.destroy(); return; }
+  wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
 });
 
 // Cổng lắng nghe: Render (và các PaaS khác) cấp cổng qua biến PORT —

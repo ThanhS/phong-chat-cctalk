@@ -165,6 +165,14 @@
       .member .tag.bdh-logo svg{flex:none;}
       .member .tag.bdh-logo.yellow{background:#f5b921;color:#4a3200;border-color:#d9a92c;}
       .member .tag.bdh-logo.purple{background:#7b3fc4;color:#fff;border-color:#7b3fc4;}
+      /* Tag BOT xám nhỏ — chỉ hiện cho thành viên bot do MÁY CHỦ gửi (chế độ máy chủ thật) */
+      .member .tag.bot{background:#eef1f3;color:#66707a;border-color:#cfd6dc;letter-spacing:.04em;}
+      .msg .tag-bot{font-size:.6rem;font-weight:800;background:#eef1f3;color:#66707a;border:1px solid #cfd6dc;border-radius:4px;padding:.05rem .3rem;letter-spacing:.04em;vertical-align:1px;}
+      /* Thanh trạng thái kết nối máy chủ chat (hub WebSocket) — gọn, ngay trên khung chat */
+      .hub-status{display:flex;align-items:center;gap:.45rem;padding:.32rem .9rem;font-size:.78rem;font-weight:600;color:var(--muted);background:var(--panel-2);border-bottom:1px solid var(--line);}
+      .hub-dot{flex:none;width:9px;height:9px;border-radius:50%;background:#c0392b;box-shadow:0 0 0 3px rgba(192,57,43,.15);}
+      .hub-dot.on{background:#1e9e4a;box-shadow:0 0 0 3px rgba(30,158,74,.18);}
+      .hub-dot.wait{background:#e6a817;box-shadow:0 0 0 3px rgba(230,168,23,.18);}
       .member .rank-hint{font-size:.62rem;font-weight:700;color:var(--muted);flex:none;}
       .mod-box{margin-top:1rem;border:1px solid var(--line);border-radius:12px;padding:.75rem .8rem;background:var(--panel-2);}
       .mod-box .mod-title{font-size:.8rem;font-weight:800;letter-spacing:.03em;margin-bottom:.55rem;}
@@ -920,6 +928,8 @@
             </div>
           </div>
 
+          <div class="hub-status" id="hubStatus"><span class="hub-dot" id="hubDot"></span><span id="hubStatusText">Chưa nối máy chủ chat — đang ở chế độ bot demo (mỗi máy một phòng riêng)</span></div>
+
           <div class="messages" id="messages"></div>
 
           <div class="chat-grip" id="chatGrip" role="separator" aria-orientation="horizontal" aria-label="Kéo để thay đổi chiều cao khung chat" title="Kéo xuống để khung chat cao hơn (thanh voice phía dưới thu lại), kéo lên để trả lại — bấm đúp để về mặc định"><span></span></div>
@@ -1191,6 +1201,237 @@
       }
       var ID_RE = /^[A-Za-z0-9_]+$/;
 
+      /* ================= Hub WebSocket: chế độ MÁY CHỦ THẬT =================
+         Sau khi đăng nhập xong, trang tự nối WebSocket tới hub của chính
+         token-server: wss://<địa chỉ máy chủ đăng nhập>/ws (http -> ws,
+         https -> wss, thêm /ws ở cuối), gửi tin đầu tiên
+         {type:'auth', token: session}. Auth thành công (nhận 'auth-ok')
+         thì trang chuyển sang CHẾ ĐỘ MÁY CHỦ THẬT: danh sách người online,
+         tin nhắn và danh sách phòng đều lấy từ máy chủ nên 2 máy (điện
+         thoại + PC) thấy giống hệt nhau và chat chung được. Máy chủ còn
+         tự sinh BOT cho đông vui (~35 bot/phòng): presence và message của
+         bot có thêm trường bot:true + gender — trang hiển thị bot như
+         người thường (màu tên + icon theo giới tính) kèm tag "BOT" xám.
+         Chưa nhập địa chỉ máy chủ / nối thất bại / mất kết nối quá số lần
+         thử lại thì GIỮ NGUYÊN chế độ bot demo cũ (mỗi máy tự sinh bot).
+         Hàng đợi mic và Lô Tô vẫn chạy local từng máy như cũ (chưa đồng
+         bộ qua hub) — đúng phạm vi đợt này. */
+      var hub = { ws:null, mode:"off", attempts:0, intentional:false, demoSnapshot:null, everOn:false };
+      /* Đang ở "phía máy chủ": đã nối thật, hoặc đang nối lại sau khi đã
+         từng nối thật — lúc này chat / tạo / xóa phòng vẫn đi đường hub
+         (gửi không được thì báo đang nối lại), không rơi về bot local */
+      function hubActive(){ return hub.mode === "on" || (hub.mode === "connecting" && hub.everOn); }
+      var HUB_DEFAULT_SLUGS = { "101":"dai-sanh", "102":"giao-luu", "103":"ho-tro" };
+      var HUB_MAX_ATTEMPTS = 5;
+      function hubWsUrl(){
+        if(!authServer) return "";
+        return authServer.replace(/^http:/i, "ws:").replace(/^https:/i, "wss:").replace(/\/+$/, "") + "/ws";
+      }
+      function hubSetStatus(){
+        var dot = $("hubDot"), txt = $("hubStatusText");
+        if(!dot || !txt) return;
+        if(hub.mode === "on"){ dot.className = "hub-dot on"; txt.textContent = "Đã nối máy chủ chat — bạn đang chat chung thật với các máy khác"; }
+        else if(hub.mode === "connecting"){ dot.className = "hub-dot wait"; txt.textContent = "Đang nối máy chủ chat…"; }
+        else { dot.className = "hub-dot"; txt.textContent = "Chưa nối máy chủ chat — đang ở chế độ bot demo (mỗi máy một phòng riêng)"; }
+      }
+      function hubRoomSlug(r){ return r ? (r.slug || HUB_DEFAULT_SLUGS[r.id] || ("phong-" + r.id)) : null; }
+      function hubRoomBySlug(slug){ return rooms.filter(function(r){ return hubRoomSlug(r) === slug; })[0]; }
+      function hubSend(obj){
+        if(hub.ws && hub.ws.readyState === 1){ try{ hub.ws.send(JSON.stringify(obj)); return true; }catch(e){} }
+        return false;
+      }
+      function hubJoinCurrent(){
+        var r = currentRoom(); if(!r) return;
+        hubSend({ type:"join", room: r.id });
+      }
+      /* Thành viên máy chủ gửi ({id,name,rank,bot?,gender?}) -> member
+         local để render chung với memberHTML/rankOf sẵn có. Cấp bậc lấy
+         đúng từ máy chủ; bot giữ nguyên cờ bot + giới tính máy chủ gửi;
+         trạng thái cấm chat / cấm mic local của chính mình được giữ lại. */
+      function hubMemberLocal(sm){
+        var rank = String((sm && sm.rank) || "member").toLowerCase();
+        var isMe = !!(state.userId && sm.id === state.userId);
+        var m = { name: sm.name || sm.id, mic: isMe, tag: null, gender: (sm.gender === "F" || sm.gender === "M") ? sm.gender : genderOf(sm.name), hue: hueFromId(sm.id), grant: null, grantedBy: null, chatBanned: false, micBanned: false, bot: !!sm.bot, srvId: sm.id };
+        if(rank === "qtv") m.tag = "QTV";
+        else if(rank === "bdh-den") m.tag = "BĐH";
+        else if(rank === "bdh-vang"){ m.tag = "BĐH"; m.grant = "yellow"; m.grantedBy = "black"; }
+        else if(rank === "bdh-tim"){ m.tag = "BĐH"; m.grant = "purple"; m.grantedBy = "black"; }
+        if(isMe){
+          m.me = true;
+          var prev = null;
+          rooms.forEach(function(r){ r.members.forEach(function(x){ if(x.me) prev = x; }); });
+          if(prev){ m.chatBanned = !!prev.chatBanned; m.micBanned = !!prev.micBanned; }
+          if(state.gender) m.gender = state.gender;
+        }
+        return m;
+      }
+      /* Tin nhắn máy chủ gửi ({id,userId,name,rank,text,time,bot?,gender?})
+         -> message local. Bot: màu chữ theo giới tính (nữ tím, nam xanh)
+         như cách phòng demo vẫn tô màu; người thật: màu cố định theo ID
+         để mọi máy thấy giống nhau. */
+      function hubMsgLocal(gm){
+        var isMe = !!(state.userId && gm.userId === state.userId);
+        var cls = gm.bot ? (gm.gender === "F" ? "c-purple" : "c-blue") : CLASSES[hueFromId(gm.userId || gm.name) % CLASSES.length];
+        var t = gm.time ? new Date(gm.time) : new Date();
+        return { type:"msg", name: gm.name, text: gm.text, cls: cls, time: isNaN(t.getTime()) ? timeNow() : t.toLocaleTimeString("en-US", {hour:"numeric", minute:"2-digit", second:"2-digit", hour12:true}), me: isMe, bot: !!gm.bot };
+      }
+      function hubApplyRoomState(d){
+        var r = hubRoomBySlug(d.room); if(!r) return;
+        r.members = (d.members || []).map(hubMemberLocal);
+        r.messages = (d.messages || []).map(hubMsgLocal);
+        r.unread = 0;
+        if(r.id === state.roomId) renderMessages();
+        renderRoomList(); updateOnline();
+      }
+      function hubApplyPresence(d){
+        var r = hubRoomBySlug(d.room); if(!r) return;
+        r.members = (d.members || []).map(hubMemberLocal);
+        renderRoomList(); updateOnline();
+      }
+      /* Danh sách phòng từ máy chủ: 4 phòng mặc định (208 là phòng chính
+         ở đầu trang — không phải sảnh nên bỏ qua) + phòng tự tạo (ID từ
+         104). Phòng tự tạo nào không còn trên máy chủ thì gỡ khỏi cột
+         trái (trừ phòng đang ở — 'room-closed' sẽ xử lý riêng). */
+      function hubSyncRooms(list){
+        if(!Array.isArray(list)) return;
+        var seenCustom = {};
+        list.forEach(function(sr){
+          var pid = String(sr.id);
+          if(pid === "208") return;
+          var r = roomById(pid);
+          if(!r){
+            r = { id: pid, name: "Phòng " + pid, logo: null, commentCooldown: 0, members: [], messages: [], unread: 0, stage: null, queue: [], queueClosed: false };
+            rooms.push(r);
+          }
+          r.slug = sr.room;
+          if(parseInt(pid, 10) >= 104){
+            seenCustom[pid] = true;
+            var nm = String(sr.label || "").replace(/\s*\(ID \d+\)\s*$/, "");
+            if(nm) r.name = nm;
+          }
+        });
+        rooms = rooms.filter(function(r){
+          var n = parseInt(r.id, 10);
+          return !(n >= 104 && !seenCustom[r.id] && r.id !== state.roomId);
+        });
+        renderRoomList();
+      }
+      /* Vào chế độ máy chủ thật: chụp lại trạng thái bot demo (để quay về
+         nếu mất kết nối hẳn), dừng bot, dọn danh sách bot — room-state và
+         presence của máy chủ sẽ đổ dữ liệu thật (kèm bot của máy chủ). */
+      function hubEnterServerMode(){
+        if(hub.mode !== "on"){
+          if(!hub.demoSnapshot){ try{ hub.demoSnapshot = JSON.stringify(rooms); }catch(e){} }
+          hub.mode = "on";
+          hub.everOn = true;
+          state.running = false;
+          rooms.forEach(function(r){ r.members = []; r.messages = []; r.unread = 0; });
+        }
+        hubSetStatus();
+      }
+      /* Quay về chế độ bot demo: khôi phục nguyên trạng phòng + bot như
+         trước khi nối máy chủ, chạy lại bot. */
+      function hubEnterDemoMode(notify){
+        hub.mode = "off";
+        hub.everOn = false;
+        hubSetStatus();
+        if(hub.demoSnapshot){
+          try{ rooms = JSON.parse(hub.demoSnapshot); }catch(e){}
+          if(state.user){
+            if(!roomById(state.roomId)) state.roomId = rooms[0].id;
+            moveUserTo(state.roomId);
+          }
+          renderRoomHeader(); renderRoomList(); renderMessages(); updateOnline();
+        }
+        if(state.user) startBots();
+        if(notify) toast("Mất kết nối máy chủ chat — đã quay về chế độ bot demo (mỗi máy một phòng riêng)");
+      }
+      function hubScheduleReconnect(){
+        if(hub.mode === "on") hub.mode = "connecting";
+        hubSetStatus();
+        hub.attempts++;
+        if(hub.attempts > HUB_MAX_ATTEMPTS){
+          hub.attempts = 0;
+          hubEnterDemoMode(true);
+          return;
+        }
+        setTimeout(function(){
+          if(state.user && !hub.intentional && hub.mode !== "off") hubConnect();
+        }, 2500 + hub.attempts * 1200);
+      }
+      function hubOnMessage(ev){
+        var d; try{ d = JSON.parse(ev.data); }catch(e){ return; }
+        if(!d || !d.type) return;
+        if(d.type === "auth-ok"){
+          hub.attempts = 0;
+          hubEnterServerMode();
+          hubJoinCurrent();
+        } else if(d.type === "rooms"){
+          hubSyncRooms(d.rooms);
+        } else if(d.type === "room-state"){
+          hubApplyRoomState(d);
+        } else if(d.type === "presence"){
+          hubApplyPresence(d);
+        } else if(d.type === "message"){
+          var r = hubRoomBySlug(d.room);
+          if(r && d.msg) addMessage(r.id, hubMsgLocal(d.msg), { sound: r.id === state.roomId ? "pop" : null });
+        } else if(d.type === "room-created"){
+          var nr = roomById(String(d.id));
+          if(!nr){
+            nr = { id: String(d.id), name: String(d.label || "").replace(/\s*\(ID \d+\)\s*$/, "") || ("Phòng " + d.id), logo: null, commentCooldown: 0, members: [], messages: [], unread: 0, stage: null, queue: [], queueClosed: false };
+            rooms.push(nr);
+          }
+          nr.slug = d.room;
+          renderRoomList();
+          toast("Đã tạo sảnh \"" + nr.name + "\" trên máy chủ — mọi máy đều thấy sảnh này");
+          sfx("ding");
+          enterRoom(nr.id);
+        } else if(d.type === "room-closed"){
+          var cr = hubRoomBySlug(d.room);
+          if(cr){
+            var wasCurrent = state.roomId === cr.id;
+            var cname = cr.name;
+            rooms = rooms.filter(function(x){ return x.id !== cr.id; });
+            delete state.openRooms[cr.id];
+            toast("Sảnh \"" + cname + "\" đã bị QTV xóa trên máy chủ");
+            /* KHÔNG gán state.roomId trước: enterRoom phải thấy phòng
+               đã đổi thì mới moveUserTo + gửi join lên hub để nhận lại
+               room-state của Đại Sảnh */
+            if(wasCurrent){ enterRoom("101"); }
+            renderRoomHeader(); renderRoomList(); updateOnline();
+          }
+        } else if(d.type === "error"){
+          if(d.code === "unauthorized"){ hubDisconnect(); sessionExpired(); }
+          else if(d.message) toast(d.message);
+        }
+      }
+      function hubConnect(){
+        if(!authServer || !authSession) return;
+        if(hub.ws && (hub.ws.readyState === 0 || hub.ws.readyState === 1)) return;
+        var url = hubWsUrl(); if(!url) return;
+        hub.intentional = false;
+        if(hub.mode === "off") hub.mode = "connecting";
+        hubSetStatus();
+        var ws;
+        try{ ws = new WebSocket(url); }catch(e){ hubScheduleReconnect(); return; }
+        hub.ws = ws;
+        ws.onopen = function(){ hubSend({ type:"auth", token: authSession }); };
+        ws.onmessage = hubOnMessage;
+        ws.onerror = function(){ try{ ws.close(); }catch(e){} };
+        ws.onclose = function(){
+          if(hub.ws === ws) hub.ws = null;
+          if(hub.intentional || !state.user){ hub.mode = "off"; hubSetStatus(); return; }
+          hubScheduleReconnect();
+        };
+      }
+      function hubDisconnect(){
+        hub.intentional = true;
+        hub.attempts = 0;
+        if(hub.ws){ try{ hub.ws.close(); }catch(e){} hub.ws = null; }
+        hub.mode = "off";
+        hubSetStatus();
+      }
+
       /* ================= Dữ liệu phòng: mặc định đúng 3 phòng ================= */
       var NAME_POOL = ["Zô Zanh","Toàn","xamrong","tien2169843000","tanty01230","Bảo","Ken_Ken","asdanhyeuem14","Gãu Khiêm AStrol","NhựtĐậpChai","Kfffffff","™Sóng Gió™","Hùng Bịp","Mèo Ú","Kaito Kid 99","bé Na 2k7","Cu Tí Hon","Anh Ba Khía","Sếp Tổng 88","Lão Hạc Gaming","Chị Bảy Điệu","Út Cưng","Phong Lữ Hành","Đạt 09","Kiều Anh","Minh Tuấn Pro","Sói Cô Đơn","Bé Bỏng","Hồng Nhung","Tuấn Anh 2k3","Hải Đăng 07","Mưa Rào","Cọp Giấy","Nắng Vàng","Tèo Em","Bin Nguyễn","Kẹo Ngọt 99","Hạt Dẻ Cười","Sư Tử Hà Đông","Anh Hùng Bàn Phím","Bé Heo","Mơ Mộng","Ngọc Trai Đen","Phê Pha","Quậy Banh Nóc","Tũn Tũn","Vịt Bầu","Xì Trum Nhỏ","Yến Nhi 2k6","Cá Mập Nhỏ","Dũng Sĩ 2k","Gió Đông","Long Đẹp Trai","Ốc Tiêu","Quân Tử","Rin Rin","Sầu Riêng","Ước Mơ Xanh","Zin Zin","Chú Cuội","Dế Mèn","Ếch Xanh","Giang Hồ Nhỏ","Kẻ Lữ Hành","Lính Mới 2k5","Ông Ngoại Online","Xuân Tóc Đỏ","Yêu Đời 88","Hiếu Thứ Hai","Em Là Ai"];
       var CLASSES = ["c-green","c-orange","c-red","c-blue","c-purple","c-plain"];
@@ -1350,6 +1591,25 @@
       var mainRoom = { id:"208", name:"Giao Lưu Kết Bạn", logo:null };
       /* Không còn tag viết tắt kiểu [GLKB] trước tên nữa — tên hiển thị đi theo đúng tên người dùng đặt. */
 
+      /* Tăng thêm ~35 BOT mỗi phòng cho đông vui (chế độ bot demo): lấy
+         tên chưa dùng trong phòng đó từ NAME_POOL, mic bật/tắt ngẫu
+         nhiên, giới tính theo tên như bot sẵn có. Phòng chính 208 cũng
+         có đủ 35 bot như các sảnh. Bot vẫn chat ngẫu nhiên như cũ qua
+         botChatTick (chọn ngẫu nhiên trong danh sách thành viên). */
+      (function topUpBots(){
+        function addBots(roomObj, count){
+          if(!roomObj.members) roomObj.members = [];
+          var used = {};
+          roomObj.members.forEach(function(m){ used[m.name] = true; });
+          var avail = NAME_POOL.filter(function(n){ return !used[n]; });
+          for(var i = 0; i < avail.length && count > 0; i++, count--){
+            roomObj.members.push(mkMember(avail[i], Math.random() < 0.45));
+          }
+        }
+        rooms.forEach(function(r){ addBots(r, 35); });
+        addBots(mainRoom, 35);
+      })();
+
       /* Hàng chờ lên mic + người đang trên mic, theo từng sảnh */
       (function initQueues(){
         var seeds = {
@@ -1451,6 +1711,7 @@
         }
         else if(m.tag){ tag = '<span class="tag'+(m.tag==="BĐH"?" bdh-black":(m.tag==="VIP"?" vip":""))+'">'+esc(m.tag)+"</span>"; }
         /* Đã bỏ hẳn nhãn chữ áo vàng / áo tím cạnh tên — chỉ còn màu tên và màu áo để nhận biết cấp bậc. */
+        if(m.bot) tag += '<span class="tag bot">BOT</span>';
         if(m.chatBanned) tag += '<span class="tag banned">Cấm chat</span>';
         if(m.micBanned) tag += '<span class="tag banned">Cấm mic</span>';
         /* Chế độ chỉ BĐH nói: mic của thành viên thường (cấp > 3) hiện TẮT hẳn */
@@ -1536,7 +1797,7 @@
         if(m.type==="announce"){
           return '<div class="announce"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10v4a1 1 0 0 0 1 1h2l4 4.5c.8.9 2 .3 2-.9V5.3c0-1.2-1.2-1.8-2-.9L6 9H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg><span>'+esc(m.text)+"</span></div>";
         }
-        return '<div class="msg'+(m.me?" me":"")+'"><span class="who"><b>'+esc(m.name)+"</b> "+esc(m.time)+'</span><br/><span class="text '+(m.cls||"c-plain")+'">'+esc(m.text)+"</span></div>";
+        return '<div class="msg'+(m.me?" me":"")+'"><span class="who"><b>'+esc(m.name)+"</b>"+(m.bot?' <span class="tag-bot">BOT</span>':"")+" "+esc(m.time)+'</span><br/><span class="text '+(m.cls||"c-plain")+'">'+esc(m.text)+"</span></div>";
       }
       function renderMessages(){
         var box = $("messages");
@@ -1569,6 +1830,13 @@
       /* ================= Online count ================= */
       function totalMembers(){ return rooms.reduce(function(s,r){ return s + r.members.length; }, 0); }
       function updateOnline(){
+        /* Chế độ máy chủ thật: hiện đúng số người (thật + bot máy chủ)
+           đang online trong sảnh hiện tại, không dùng số mô phỏng nữa */
+        if(typeof hubActive === "function" && hubActive()){
+          var hr = currentRoom();
+          $("onlineCount").textContent = hr ? hr.members.length : 0;
+          return;
+        }
         var drift = Math.round(Math.sin(Date.now()/60000)*9 + rand(-3,3));
         $("onlineCount").textContent = 118 + totalMembers() + drift;
       }
@@ -1607,6 +1875,9 @@
         if(changed && state.user){
           if(typeof stopAllTalk === "function") stopAllTalk();
           moveUserTo(roomId);
+          /* Chế độ máy chủ thật: báo hub vào sảnh này — máy chủ trả
+             room-state (người online thật + 50 tin gần nhất) thay cho bot */
+          if(hubActive()) hubJoinCurrent();
           renderMessages();
           sysHere("Bạn đã vào sảnh " + r.name + " (ID sảnh: " + r.id + ")");
           sysHere("Hiện tại chế độ trò chuyện của sảnh là " + (state.mode==="free" ? "tự do trò chuyện, bạn có thể tự do trò chuyện" : state.mode==="queue" ? "xếp hàng — bạn có thể nhấn nút \"Xếp hàng\" để xếp hàng, khi ở vị trí đầu tiên bạn sẽ được gọi lên mic" : "chỉ BĐH nói"));
@@ -1670,6 +1941,9 @@
           : "Chào " + acc.name + "! Nói chuyện có 2 cách: giữ F2 / giữ nút mic để nói, hoặc chọn “Nói tự do” là mic tự mở ngay — nói không cần giữ phím.");
         startBots();
         lkAutoConnect();
+        /* Tự nối hub WebSocket của máy chủ đăng nhập để chat chung thật
+           giữa các máy; nối không được thì cứ ở chế độ bot demo như cũ */
+        hubConnect();
         $("chatInput").focus();
       }
       /* ----- Cổng máy chủ đăng nhập: chưa nhập địa chỉ máy chủ thì nút
@@ -1709,6 +1983,7 @@
          xóa session đã lưu trên máy và đưa về màn hình đăng nhập. */
       function sessionExpired(){
         clearAuthSession();
+        try{ hubDisconnect(); }catch(e){}
         if(!state.user){
           showAuthTab("login");
           $("loginOverlay").classList.remove("hidden");
@@ -1873,6 +2148,17 @@
           closeRoomModal();
           renderRoomHeader(); renderRoomList(); renderMessages();
           toast("Đã cập nhật sảnh \"" + name + "\" — tên phòng chính ở đầu trang không đổi");
+        } else if(hubActive()){
+          /* Chế độ máy chủ thật: tạo sảnh TRÊN MÁY CHỦ để mọi máy cùng
+             thấy. Máy chủ trả 'room-created' thì trang tự vào sảnh mới;
+             không đủ quyền (chỉ QTV/BĐH mới tạo được) thì máy chủ trả
+             lỗi và trang hiện đúng lỗi đó cho user. */
+          if(hubSend({ type:"create-room", name: name })){
+            closeRoomModal();
+            toast("Đang tạo sảnh \"" + name + "\" trên máy chủ…");
+          } else {
+            formError($("rmError"), "Chưa nối được máy chủ chat — chờ vài giây rồi thử lại.");
+          }
         } else {
           var nr = { id:id, name:name, logo:null, commentCooldown: parseInt(($("rmCooldown") ? $("rmCooldown").value : "0"), 10) || 0, members:[ mkMember("BĐH " + name, true, "BĐH") ], messages:[ {type:"sys", text:"Sảnh \"" + name + "\" vừa được tạo. Chào mừng mọi người!"} ], unread:0, stage:null, queue:[], queueClosed:false };
           rooms.push(nr);
@@ -1885,6 +2171,19 @@
       });
       $("rmDelete").addEventListener("click", function(){
         if(!editingRoomId || editingRoomId==="main") return;
+        /* Chế độ máy chủ thật: xóa sảnh là việc của MÁY CHỦ (chỉ QTV,
+           chỉ sảnh tự tạo) — máy chủ gỡ sảnh cho mọi máy và gửi
+           'room-closed' cho ai đang ở trong sảnh đó */
+        if(hubActive()){
+          var delRoom = roomById(editingRoomId);
+          if(delRoom && parseInt(delRoom.id, 10) >= 104){
+            if(hubSend({ type:"delete-room", room: delRoom.id })){ closeRoomModal(); toast("Đã gửi yêu cầu xóa sảnh \"" + delRoom.name + "\" lên máy chủ"); }
+            else formError($("rmError"), "Chưa nối được máy chủ chat — chờ vài giây rồi thử lại.");
+          } else {
+            formError($("rmError"), "Ở chế độ máy chủ, chỉ xóa được sảnh tự tạo — 3 sảnh mặc định (Đại Sảnh, Giao Lưu, Hỗ trợ) máy chủ không cho xóa.");
+          }
+          return;
+        }
         if(rooms.length <= 1){ formError($("rmError"), "Phải giữ lại ít nhất 1 sảnh nên chưa xóa được."); return; }
         var r = roomById(editingRoomId);
         var wasCurrent = state.roomId === editingRoomId;
@@ -2458,6 +2757,20 @@
           var last = state.lastCommentAt[state.roomId] || 0;
           var wait = cd - Math.floor((Date.now()-last)/1000);
           if(last && wait>0){ sfx("error"); toast("Phòng " + roomNow.name + " đang set chờ comment " + cd + " giây — bạn còn phải chờ " + wait + " giây nữa mới comment tiếp được"); return; }
+        }
+        /* Chế độ máy chủ thật: gửi tin lên hub và CHỜ máy chủ phát lại
+           mới hiện trong khung chat (không tự hiện tin của mình trước)
+           để mọi máy thấy giống hệt nhau */
+        if(hubActive()){
+          if(hubSend({ type:"message", room: state.roomId, text: text })){
+            state.lastCommentAt[state.roomId] = Date.now();
+            inp.value = "";
+            sfx("send");
+          } else {
+            sfx("error");
+            toast("Đang nối lại máy chủ chat — chờ một chút rồi gửi lại");
+          }
+          return;
         }
         addMessage(state.roomId, {type:"msg", name: state.user, text:text, cls:"c-plain", time: timeNow(), me:true}, {sound:"send"});
         state.lastCommentAt[state.roomId] = Date.now();
@@ -4185,6 +4498,10 @@
       $("leaveBtn").addEventListener("click", function(){
         stopAllTalk();
         clearAuthSession();
+        hubDisconnect();
+        /* Nếu đang ở chế độ máy chủ thật thì trả danh sách phòng về
+           nguyên trạng bot demo đã chụp lại, cho lần đăng nhập sau */
+        if(hub.demoSnapshot){ try{ rooms = JSON.parse(hub.demoSnapshot); }catch(e){} }
         lkDisconnect();
         pjDisconnect(true);
         if(voice.stream){

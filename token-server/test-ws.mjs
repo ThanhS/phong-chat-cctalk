@@ -175,6 +175,18 @@ async function main() {
       const roomsB = await waitFor(b.msgs, (m) => m.type === 'rooms' && m.rooms.some((r) => r.id === 104));
       check('phòng mới phát cho mọi người', !!roomsB);
 
+      // 5b. Giới hạn phòng: mỗi người tối đa 5 phòng tự tạo (admin đã tạo 1).
+      for (let i = 0; i < 4; i++) {
+        a.ws.send(JSON.stringify({ type: 'create-room', name: `Phòng Test ${i + 2}` }));
+        const ok = await waitFor(a.msgs, (m) => m.type === 'room-created' && m.id === 105 + i);
+        if (!ok) break;
+      }
+      const roomsCount = a.msgs.filter((m) => m.type === 'room-created').length;
+      check('tạo thêm 4 phòng (đủ 5/người)', roomsCount === 5, `created=${roomsCount}`);
+      a.ws.send(JSON.stringify({ type: 'create-room', name: 'Phòng Test 6' }));
+      const tooMany = await waitFor(a.msgs, (m) => m.type === 'error' && m.code === 'too-many-rooms');
+      check('tạo phòng thứ 6 -> bị chặn (tối đa 5/người)', !!tooMany);
+
       // 6. Vào phòng tự tạo được.
       a.ws.send(JSON.stringify({ type: 'join', room: '104' }));
       const stateNew = await waitFor(a.msgs, (m) => m.type === 'room-state' && m.room === 'phong-104');
@@ -192,6 +204,38 @@ async function main() {
         body: JSON.stringify({ room: '104' }),
       });
       check('/token cho phòng tự tạo', tok.ok, `status=${tok.status}`);
+
+      // 9. Giới hạn kết nối WS theo IP: đang có 2 kết nối (a, c) -> mở thêm 8 được, cái thứ 9 bị từ chối.
+      const extra = [];
+      for (let i = 0; i < 8; i++) extra.push(await connect());
+      check('mở thêm 8 kết nối WS (đủ 10/IP)', extra.length === 8);
+      const refused = await new Promise((resolve) => {
+        const ws = new WebSocket(WS_URL);
+        let done = false;
+        const finish = (v) => { if (!done) { done = true; resolve(v); } };
+        ws.on('open', () => finish(false));
+        ws.on('error', () => finish(true));
+        ws.on('close', () => finish(true));
+        setTimeout(() => finish(false), 5000);
+      });
+      check('kết nối WS thứ 11/IP bị từ chối', refused);
+      for (const conn of extra) conn.ws.close();
+
+      // 10. Giới hạn đăng ký theo IP: 5 tài khoản liên tiếp OK, cái thứ 6 bị chặn 429.
+      let regOk = 0;
+      for (let i = 1; i <= 5; i++) {
+        const r = await fetch(`${BASE}/register`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: `reg00${i}`, password: 'testpass123' }),
+        });
+        if (r.status === 201) regOk += 1;
+      }
+      check('đăng ký 5 tài khoản liên tiếp OK', regOk === 5, `ok=${regOk}`);
+      const r6 = await fetch(`${BASE}/register`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'reg006', password: 'testpass123' }),
+      });
+      check('đăng ký thứ 6 bị chặn 429', r6.status === 429, `status=${r6.status}`);
 
       a.ws.close();
       c.ws.close();

@@ -26,6 +26,8 @@
 // V3.1: bot 35/phòng luôn online + tự chat mỗi ~10s/phòng.
 // V3.2: Lô Tô đồng bộ qua hub — 1 vòng/phòng, chủ vòng kêu số, máy chủ
 // kiểm tra KINH và phát cho cả phòng (chi tiết ở mục "Lô Tô" phía dưới).
+// V3.3: chống spam/lạm dụng theo IP — giới hạn /login, /register, /token,
+// chat và số kết nối WS trên 1 IP; mỗi người tối đa 5 phòng tự tạo.
 
 import http from 'node:http';
 import crypto from 'node:crypto';
@@ -243,6 +245,63 @@ async function issueToken({ room, identity, name, rank }) {
     expiresIn: TOKEN_TTL,
   };
 }
+
+// ---- Chống spam / lạm dụng theo IP (v3.3) ---------------------------------
+// Render đứng trước app nên IP thật của client nằm ở cuối X-Forwarded-For
+// (mục cuối là IP mà proxy của Render nhìn thấy). Giới hạn trượt theo IP
+// để 1 địa chỉ không flood được API hay mở hàng loạt kết nối WebSocket.
+// Lưu ý: giới hạn này chống lạm dụng (spam, dò mật khẩu, tạo nick rác),
+// không chống được DDoS lớn — việc đó cần Cloudflare (cần tên miền riêng).
+function clientIp(req) {
+  const xff = req.headers['x-forwarded-for'];
+  if (xff) {
+    const parts = String(xff).split(',').map((s) => s.trim()).filter(Boolean);
+    if (parts.length) return parts[parts.length - 1];
+  }
+  return req.socket?.remoteAddress || 'unknown';
+}
+// Giới hạn trượt: tối đa `max` lần trong `windowMs` cho mỗi (ip, key).
+const ipBuckets = new Map(); // `${ip}|${key}` -> { count, start }
+function ipAllow(ip, key, max, windowMs) {
+  const now = Date.now();
+  const k = `${ip}|${key}`;
+  const b = ipBuckets.get(k);
+  if (!b || now - b.start > windowMs) { ipBuckets.set(k, { count: 1, start: now }); return true; }
+  if (b.count >= max) return false;
+  b.count += 1;
+  return true;
+}
+// Dọn bucket cũ mỗi 10 phút để Map không phình vô hạn.
+{
+  const t = setInterval(() => {
+    const now = Date.now();
+    for (const [k, b] of ipBuckets) {
+      if (now - b.start > 60 * 60 * 1000) ipBuckets.delete(k);
+    }
+  }, 10 * 60 * 1000);
+  if (t.unref) t.unref();
+}
+
+// Số kết nối WebSocket trên 1 IP (chống mở hàng loạt socket để spam chat).
+const MAX_WS_PER_IP = 10;
+const wsConnsByIp = new Map(); // ip -> count
+function wsTrackIp(ws, ip) {
+  ws.ip = ip;
+  ws.ipTracked = true;
+  wsConnsByIp.set(ip, (wsConnsByIp.get(ip) || 0) + 1);
+}
+function wsUntrackIp(ws) {
+  if (!ws.ipTracked) return;
+  ws.ipTracked = false;
+  const n = (wsConnsByIp.get(ws.ip) || 1) - 1;
+  if (n <= 0) wsConnsByIp.delete(ws.ip);
+  else wsConnsByIp.set(ws.ip, n);
+}
+
+// Số phòng tự tạo: tối đa 5/người, tối đa 50 phòng trên toàn máy chủ.
+const MAX_ROOMS_PER_USER = 5;
+const MAX_CUSTOM_ROOMS = 50;
+const roomsByCreator = new Map(); // userId -> count
 
 // ---- Hub WebSocket: chat + hiện diện + phòng chung giữa các máy (v3) ------
 // Trang web nối wss://<host>/ws (địa chỉ lấy từ ô "Máy chủ đăng nhập").
@@ -536,6 +595,7 @@ wss.on('connection', (ws) => {
         if (!text || text.length > WS_MAX_MSG_LEN) return wsSend(ws, { type: 'error', code: 'bad-text', message: `Tin nhắn dài 1-${WS_MAX_MSG_LEN} ký tự.` });
         const now = Date.now();
         if (now - ws.lastMsgAt < WS_MIN_MSG_GAP_MS) return wsSend(ws, { type: 'error', code: 'rate-limited', message: 'Gửi chậm lại một chút.' });
+        if (!ipAllow(ws.ip || 'unknown', 'chat', 10, 10 * 1000)) return wsSend(ws, { type: 'error', code: 'rate-limited', message: 'Gửi chậm lại một chút.' });
         ws.lastMsgAt = now;
         const chatMsg = { id: nextMsgId(), userId: ws.user.sub, name: ws.user.name, rank: ws.user.rank, text, time: new Date(now).toISOString() };
         const hist = messagesOf(roomName);
@@ -548,10 +608,14 @@ wss.on('connection', (ws) => {
         if (!MANAGER_RANKS.has(ws.user.rank)) return wsSend(ws, { type: 'error', code: 'forbidden', message: 'Chỉ QTV/BĐH mới tạo được phòng.' });
         const name = String(msg.name ?? '').trim().slice(0, 40);
         if (name.length < 2) return wsSend(ws, { type: 'error', code: 'bad-name', message: 'Tên phòng dài 2-40 ký tự.' });
+        if (customRooms.size >= MAX_CUSTOM_ROOMS) return wsSend(ws, { type: 'error', code: 'too-many-rooms', message: 'Đã đủ 50 phòng tự tạo, không tạo thêm được.' });
+        const createdCount = roomsByCreator.get(ws.user.sub) || 0;
+        if (createdCount >= MAX_ROOMS_PER_USER) return wsSend(ws, { type: 'error', code: 'too-many-rooms', message: 'Mỗi người chỉ tạo được tối đa 5 phòng.' });
         const id = nextRoomId++;
         const roomName = `phong-${id}`;
         const label = `${name} (ID ${id})`;
         customRooms.set(roomName, { id, label, createdBy: ws.user.sub });
+        roomsByCreator.set(ws.user.sub, createdCount + 1);
         ROOMS[String(id)] = roomName;
         ROOMS[roomName] = roomName;
         ROOM_LABELS[roomName] = label;
@@ -565,6 +629,8 @@ wss.on('connection', (ws) => {
         if (ws.user.rank !== 'qtv') return wsSend(ws, { type: 'error', code: 'forbidden', message: 'Chỉ QTV mới xóa được phòng.' });
         const removed = customRooms.get(roomName);
         customRooms.delete(roomName);
+        const rc = roomsByCreator.get(removed.createdBy) || 0;
+        if (rc > 0) roomsByCreator.set(removed.createdBy, rc - 1);
         delete ROOMS[String(removed.id)];
         delete ROOMS[roomName];
         delete ROOM_LABELS[roomName];
@@ -667,7 +733,7 @@ wss.on('connection', (ws) => {
     }
   });
 
-  ws.on('close', () => { clearTimeout(authTimer); wsLeaveRoom(ws); });
+  ws.on('close', () => { clearTimeout(authTimer); wsLeaveRoom(ws); wsUntrackIp(ws); });
   ws.on('error', () => { /* socket lỗi: close sẽ dọn dẹp */ });
 });
 
@@ -715,6 +781,9 @@ const server = http.createServer(async (req, res) => {
     // POST /login {id, password} — đăng nhập, trả session.
     if (req.method === 'POST' && url.pathname === '/login') {
       const body = await readBody(req);
+      if (!ipAllow(clientIp(req), 'login', 20, 5 * 60 * 1000)) {
+        return send(res, 429, { error: 'Đăng nhập quá nhiều lần từ địa chỉ này, thử lại sau 5 phút.' });
+      }
       const id = String(body.id || '').trim().toLowerCase();
       const password = String(body.password || '');
       if (!id || !password) return send(res, 400, { error: 'Thiếu ID hoặc mật khẩu.' });
@@ -738,6 +807,9 @@ const server = http.createServer(async (req, res) => {
     // POST /register {id, password, name?} — đăng ký thành viên thường.
     if (req.method === 'POST' && url.pathname === '/register') {
       const body = await readBody(req);
+      if (!ipAllow(clientIp(req), 'register', 5, 60 * 60 * 1000)) {
+        return send(res, 429, { error: 'Địa chỉ này đã đăng ký quá nhiều tài khoản, thử lại sau 1 giờ.' });
+      }
       const id = String(body.id || '').trim().toLowerCase();
       const password = String(body.password || '');
       const name = String(body.name || '').trim().slice(0, 40) || id;
@@ -801,6 +873,9 @@ const server = http.createServer(async (req, res) => {
       const params = req.method === 'POST'
         ? await readBody(req)
         : Object.fromEntries(url.searchParams.entries());
+      if (!ipAllow(clientIp(req), 'token', 60, 5 * 60 * 1000)) {
+        return send(res, 429, { error: 'Xin token quá nhiều lần, thử lại sau.' });
+      }
       const session = sessionFromReq(req, params);
       if (session) {
         const out = await issueToken({
@@ -828,7 +903,12 @@ const server = http.createServer(async (req, res) => {
 server.on('upgrade', (req, socket, head) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname !== '/ws') { socket.destroy(); return; }
-  wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+  const ip = clientIp(req);
+  if ((wsConnsByIp.get(ip) || 0) >= MAX_WS_PER_IP) { socket.destroy(); return; }
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    wsTrackIp(ws, ip);
+    wss.emit('connection', ws, req);
+  });
 });
 
 // Cổng lắng nghe: Render (và các PaaS khác) cấp cổng qua biến PORT —

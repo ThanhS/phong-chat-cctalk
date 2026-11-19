@@ -96,13 +96,37 @@ trường nên không mất). Hàng đợi mic và Lô Tô **chưa** đồng b�
 (vẫn chạy local từng máy).
 
 Test: `node test-ws.mjs` — tự khởi động server test ở cổng 3102, kiểm tra
-18 mục (auth, chat 2 chiều, lịch sử, presence, bot 35/phòng + bot tự chat,
-tạo phòng, quyền, /token phòng mới) rồi tắt server và dọn data test.
+30 mục (auth, chat 2 chiều, lịch sử, presence, bot 35/phòng + bot tự chat,
+Lô Tô chung: tạo vòng, chốt số, kêu số, KINH, 1 vòng/phòng, tạo phòng,
+quyền, /token phòng mới) rồi tắt server và dọn data test.
 
 Mỗi phòng mặc định có sẵn 35 bot (tên + giới tính cố định theo seed) luôn
 online và tự chat mỗi ~10s/phòng — bot có mặt trong presence và lịch sử
 như người thường, chỉ khác là có thêm trường `bot: true` + `gender` để
 trang hiển thị tag BOT.
+
+## Lô Tô chung giữa các máy (v3.2 — mới)
+
+Lô Tô giờ đồng bộ qua hub WebSocket như chat: 1 vòng/phòng, ai cũng thấy
+cùng một vòng, cùng danh sách người chơi, cùng số đã kêu, cùng người KINH.
+- Tạo vòng: `{type:'loto-create', room, kinh}` — chỉ QTV/BĐH, kinh 2–6 số.
+  Đang có vòng mở thì BĐH khác tạo sẽ bị từ chối (`loto-busy`); hết vòng
+  (có người KINH) thì người khác tạo được vòng mới. Máy chủ tự sinh 10 bot
+  chơi cùng mỗi vòng (số ngẫu nhiên), bot cũng có thể KINH.
+- Chốt số: `{type:'loto-join', room, numbers}` — đủ `kinh` số khác nhau
+  01–90, chỉ được chốt khi vòng đang chờ (chưa bắt đầu kêu).
+- Bắt đầu kêu: `{type:'loto-start', room}` — chỉ chủ vòng (hoặc QTV).
+  Mỗi số kêu xong, máy của chủ vòng gửi `{type:'loto-called', room, number}`
+  lên máy chủ; máy chủ ghi lại, phát `{type:'loto-called'}` cho cả phòng
+  và tự kiểm tra KINH (cả người thật lẫn bot).
+- KINH: máy chủ phát `{type:'loto-kinh', room, winner}` và vòng chuyển
+  sang `finished`; người chơi cũng có thể tự báo bằng `{type:'loto-kinh'}`.
+- Đóng vòng: `{type:'loto-close', room}` — chủ vòng hoặc QTV/BĐH; xong
+  thì tạo được vòng mới ngay.
+- Trạng thái vòng đầy đủ (`{type:'loto-state'}`) gửi kèm khi vào phòng
+  (`room-state.loto`) và phát lại mỗi khi đổi — người vào sau thấy vòng
+  đang chơi dở. `GET /health` trả thêm số vòng đang mở (`lotoRounds`).
+- Hàng đợi mic vẫn chưa đồng bộ (chạy local từng máy).
 
 ## Chạy thử trên máy mình (chưa cần VPS)
 

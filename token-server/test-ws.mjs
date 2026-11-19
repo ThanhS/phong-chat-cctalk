@@ -119,6 +119,52 @@ async function main() {
       const botMsg = await waitFor(b.msgs, (m) => m.type === 'message' && m.msg?.bot === true, 20000);
       check('bot tự chat (có tag bot)', !!botMsg, JSON.stringify(botMsg?.msg));
 
+      // 4c. Lô Tô chung: admin tạo vòng, BĐH khác tạo thì bị chặn, chốt số + kêu số + KINH chung.
+      const bdhSession = await login('bdh', 'bdhpass123');
+      const d = await connect();
+      d.ws.send(JSON.stringify({ type: 'auth', token: bdhSession }));
+      await waitFor(d.msgs, (m) => m.type === 'auth-ok');
+      d.ws.send(JSON.stringify({ type: 'join', room: '208' }));
+      await waitFor(d.msgs, (m) => m.type === 'room-state');
+
+      a.ws.send(JSON.stringify({ type: 'loto-create', room: '208', kinh: 3 }));
+      const lotoStateB = await waitFor(b.msgs, (m) => m.type === 'loto-state' && m.state && m.state.active && m.state.kinh === 3);
+      check('BĐH tạo vòng -> cả phòng nhận loto-state', !!lotoStateB && lotoStateB.state.status === 'registering');
+      check('vòng mới có 10 bot chơi cùng', !!lotoStateB && lotoStateB.state.players.filter((p) => p.bot).length === 10, `bots=${lotoStateB ? lotoStateB.state.players.filter((p) => p.bot).length : '?'}`);
+      d.ws.send(JSON.stringify({ type: 'loto-create', room: '208', kinh: 4 }));
+      const busy = await waitFor(d.msgs, (m) => m.type === 'error' && m.code === 'loto-busy');
+      check('BĐH khác tạo vòng khi đang có vòng -> bị chặn', !!busy);
+      b.ws.send(JSON.stringify({ type: 'loto-join', room: '208', numbers: [5, 12, 33] }));
+      const joinedB = await waitFor(b.msgs, (m) => m.type === 'loto-state' && m.state.players.some((p) => p.userId === 'test001' && p.numbers.join(',') === '5,12,33'));
+      check('thành viên chốt số -> cả phòng thấy', !!joinedB);
+      b.ws.send(JSON.stringify({ type: 'loto-join', room: '208', numbers: [1, 2] }));
+      const badNums = await waitFor(b.msgs, (m) => m.type === 'error' && m.code === 'bad-numbers');
+      check('chốt sai số lượng -> báo lỗi', !!badNums);
+      a.ws.send(JSON.stringify({ type: 'loto-start', room: '208' }));
+      const callingB = await waitFor(b.msgs, (m) => m.type === 'loto-state' && m.state.status === 'calling');
+      check('chủ vòng bắt đầu kêu -> cả phòng thấy', !!callingB);
+      b.ws.send(JSON.stringify({ type: 'loto-join', room: '208', numbers: [7, 8, 9] }));
+      const lateJoin = await waitFor(b.msgs, (m) => m.type === 'error' && m.code === 'loto-calling');
+      check('đang kêu số thì không chốt số được nữa', !!lateJoin);
+      a.ws.send(JSON.stringify({ type: 'loto-called', room: '208', number: 5 }));
+      const called5 = await waitFor(b.msgs, (m) => m.type === 'loto-called' && m.number === 5);
+      check('số kêu được phát cho cả phòng', !!called5);
+      a.ws.send(JSON.stringify({ type: 'loto-called', room: '208', number: 12 }));
+      await waitFor(b.msgs, (m) => m.type === 'loto-called' && m.number === 12);
+      a.ws.send(JSON.stringify({ type: 'loto-called', room: '208', number: 33 }));
+      const kinhB = await waitFor(b.msgs, (m) => m.type === 'loto-kinh' && m.winner?.userId === 'test001');
+      check('đủ số -> KINH phát cho cả phòng', !!kinhB, JSON.stringify(kinhB?.winner));
+      const finishedB = await waitFor(b.msgs, (m) => m.type === 'loto-state' && m.state.status === 'finished');
+      check('vòng chuyển sang finished sau KINH', !!finishedB);
+      d.ws.send(JSON.stringify({ type: 'loto-create', room: '208', kinh: 2 }));
+      const newRound = await waitFor(d.msgs, (m) => m.type === 'loto-state' && m.state && m.state.active && m.state.kinh === 2 && m.state.status === 'registering');
+      check('hết vòng -> BĐH khác tạo được vòng mới', !!newRound);
+      // Người vào sau thấy vòng hiện tại trong room-state.
+      c.ws.send(JSON.stringify({ type: 'join', room: '208' }));
+      const stateC2 = await waitFor(c.msgs, (m) => m.type === 'room-state' && m.loto && m.loto.active && m.loto.kinh === 2);
+      check('người vào sau thấy vòng Lô Tô trong room-state', !!stateC2);
+      d.ws.close();
+
       // 5. Member tạo phòng -> bị từ chối; admin tạo -> mọi người nhận rooms mới.
       b.ws.send(JSON.stringify({ type: 'create-room', name: 'Phòng Test' }));
       const denied = await waitFor(b.msgs, (m) => m.type === 'error' && m.code === 'forbidden');

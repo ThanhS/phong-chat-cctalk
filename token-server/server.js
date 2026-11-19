@@ -22,7 +22,10 @@
 // V3: thêm hub WebSocket /ws — chat + hiện diện + phòng chung giữa các máy
 // (chi tiết giao thức ở mục "Hub WebSocket" phía dưới). Tin nhắn và phòng
 // tự tạo chỉ giữ trong RAM; restart sẽ mất (Render gói miễn phí không có
-// ổ đĩa bền). Hàng đợi mic và Lô Tô chưa đồng bộ qua hub này.
+// ổ đĩa bền). Hàng đợi mic chưa đồng bộ qua hub này.
+// V3.1: bot 35/phòng luôn online + tự chat mỗi ~10s/phòng.
+// V3.2: Lô Tô đồng bộ qua hub — 1 vòng/phòng, chủ vòng kêu số, máy chủ
+// kiểm tra KINH và phát cho cả phòng (chi tiết ở mục "Lô Tô" phía dưới).
 
 import http from 'node:http';
 import crypto from 'node:crypto';
@@ -254,20 +257,31 @@ async function issueToken({ room, identity, name, rank }) {
 //     {type:'leave', room}              — rời phòng
 //     {type:'create-room', name}        — QTV/BĐH tạo phòng mới
 //     {type:'delete-room', room}        — QTV xóa phòng tự tạo (không xóa 4 phòng mặc định)
+//     {type:'loto-create', room, kinh}  — QTV/BĐH mở vòng Lô Tô (kinh 2-6); 1 vòng/phòng
+//     {type:'loto-join', room, numbers} — chốt số vào vòng đang mở
+//     {type:'loto-start', room}         — chủ vòng bắt đầu kêu số
+//     {type:'loto-called', room, number}— chủ vòng báo số vừa kêu (máy chủ kiểm tra KINH)
+//     {type:'loto-kinh', room}          — người chơi tự báo KINH
+//     {type:'loto-close', room}         — chủ vòng/QTV/BĐH đóng vòng
 //   Server -> Client:
 //     {type:'auth-ok', user:{id,name,rank}}
 //     {type:'rooms', rooms:[{room,label,id}]}            — danh sách phòng đầy đủ
-//     {type:'room-state', room, label, members, messages} — khi vào phòng (50 tin gần nhất)
+//     {type:'room-state', room, label, members, messages, loto} — khi vào phòng (50 tin gần nhất + vòng Lô Tô hiện tại)
 //     {type:'message', room, msg:{id,userId,name,rank,text,time}}
 //     {type:'presence', room, members:[{id,name,rank}]} — gồm cả bot {id,name,rank,gender,bot:true}
 //     tin nhắn bot có thêm bot:true + gender; bot tự nói mỗi ~10s/phòng
 //     {type:'room-created', room, label, id}
 //     {type:'room-closed', room}         — phòng đang ở bị xóa, client tự chuyển về Đại Sảnh
+//     {type:'loto-state', room, state}   — trạng thái vòng Lô Tô (null khi chưa có vòng)
+//     {type:'loto-called', room, number} — số vừa kêu (ai cũng nhận, kể cả máy chủ vòng)
+//     {type:'loto-kinh', room, winner}   — có người KINH, vòng kết thúc
+//     {type:'loto-closed', room}         — vòng bị đóng, được tạo vòng mới
 //     {type:'error', code, message}
 // Trạng thái chỉ giữ trong RAM — Render gói miễn phí không có ổ đĩa bền nên
-// restart sẽ mất tin nhắn + phòng tự tạo (tài khoản thì gieo lại từ biến môi
-// trường). Hàng đợi mic và Lô Tô chưa đồng bộ qua hub này (vẫn chạy local
-// từng máy) — sẽ làm ở bước sau nếu cần.
+// restart sẽ mất tin nhắn + phòng tự tạo + vòng Lô Tô (tài khoản thì gieo
+// lại từ biến môi trường). Hàng đợi mic chưa đồng bộ qua hub này (vẫn chạy
+// local từng máy). Lô Tô đồng bộ từ v3.2: 1 vòng/phòng, chủ vòng kêu số,
+// máy chủ kiểm tra KINH và phát cho cả phòng.
 
 const WS_AUTH_TIMEOUT_MS = 10_000;
 const WS_MAX_MSG_LEN = 500;
@@ -372,6 +386,52 @@ function membersOf(roomName) {
   const real = [...membersMapOf(roomName).values()].map(({ id, name, rank }) => ({ id, name, rank }));
   return [...real, ...botsOf(roomName)];
 }
+
+// ---- Lô Tô chung giữa các máy (v3.2) --------------------------------------
+// 1 vòng/phòng: QTV/BĐH tạo vòng (chọn cách kinh 2-6 số) -> mọi người chốt
+// số -> chủ vòng bắt đầu kêu, mỗi số kêu xong chủ vòng báo lên máy chủ,
+// máy chủ ghi lại + kiểm tra KINH + phát cho cả phòng. Ai KINH thì vòng
+// kết thúc; đóng vòng (hoặc hết vòng) xong mới tạo được vòng mới. Máy chủ
+// tự sinh 10 bot chơi cùng mỗi vòng (số ngẫu nhiên), bot cũng có thể KINH.
+const LOTO_BOTS_PER_ROUND = 10;
+const lotoByRoom = new Map(); // roomName -> state | null
+
+function lotoStateOf(roomName) { return lotoByRoom.get(roomName) || null; }
+function lotoPublic(state) {
+  if (!state) return null;
+  return {
+    active: true, hostId: state.hostId, hostName: state.hostName, kinh: state.kinh,
+    status: state.status, players: state.players, called: state.called,
+    winner: state.winner, createdAt: state.createdAt,
+  };
+}
+function lotoBroadcast(roomName) {
+  wsBroadcast(roomName, { type: 'loto-state', room: roomName, state: lotoPublic(lotoStateOf(roomName)) });
+}
+function lotoRandomTicket(kinh, rand) {
+  const nums = new Set();
+  while (nums.size < kinh) nums.add(1 + Math.floor(rand() * 90));
+  return [...nums].sort((a, b) => a - b);
+}
+function lotoMakeBots(roomName, kinh) {
+  const roster = shuffled(botsOf(roomName), Math.random);
+  return roster.slice(0, LOTO_BOTS_PER_ROUND).map((b) => ({
+    userId: b.id, name: b.name, numbers: lotoRandomTicket(kinh, Math.random), bot: true, gender: b.gender,
+  }));
+}
+function lotoCheckKinh(state) {
+  const called = new Set(state.called);
+  for (const p of state.players) {
+    if (p.numbers.length && p.numbers.every((n) => called.has(n))) return p;
+  }
+  return null;
+}
+function lotoFinish(roomName, state, winner) {
+  state.status = 'finished';
+  state.winner = { userId: winner.userId, name: winner.name, numbers: winner.numbers, bot: !!winner.bot };
+  wsBroadcast(roomName, { type: 'loto-kinh', room: roomName, winner: state.winner });
+  lotoBroadcast(roomName);
+}
 function allRooms() {
   const list = DEFAULT_ROOM_ORDER.map((room) => ({ room, label: ROOM_LABELS[room], id: DEFAULT_ROOM_IDS[room] }));
   for (const [room, r] of customRooms) list.push({ room, label: r.label, id: r.id });
@@ -405,6 +465,7 @@ function wsJoinRoom(ws, roomName) {
   wsSend(ws, {
     type: 'room-state', room: roomName, label: roomLabelOf(roomName),
     members: membersOf(roomName), messages: messagesOf(roomName),
+    loto: lotoPublic(lotoStateOf(roomName)),
   });
   wsBroadcastPresence(roomName);
 }
@@ -509,8 +570,96 @@ wss.on('connection', (ws) => {
         delete ROOM_LABELS[roomName];
         roomMessages.delete(roomName);
         roomMembers.delete(roomName);
+        lotoByRoom.delete(roomName);
         wsBroadcastAll({ type: 'rooms', rooms: allRooms() });
         wsBroadcast(roomName, { type: 'room-closed', room: roomName });
+        break;
+      }
+      case 'loto-create': {
+        if (!MANAGER_RANKS.has(ws.user.rank)) return wsSend(ws, { type: 'error', code: 'forbidden', message: 'Chỉ QTV/BĐH mới tạo được vòng Lô Tô.' });
+        const roomName = ROOMS[String(msg.room ?? '').toLowerCase()];
+        if (!roomName || ws.room !== roomName) return wsSend(ws, { type: 'error', code: 'not-in-room', message: 'Bạn chưa vào phòng này.' });
+        const kinh = Number(msg.kinh);
+        if (![2, 3, 4, 5, 6].includes(kinh)) return wsSend(ws, { type: 'error', code: 'bad-message', message: 'Cách kinh phải là 2, 3, 4, 5 hoặc 6 số.' });
+        const existing = lotoStateOf(roomName);
+        if (existing && existing.status !== 'finished') return wsSend(ws, { type: 'error', code: 'loto-busy', message: `Đã có vòng Lô Tô của ${existing.hostName} đang mở (Kinh ${existing.kinh} số). Hết vòng mới tạo được vòng mới.` });
+        const state = {
+          hostId: ws.user.sub, hostName: ws.user.name, kinh,
+          status: 'registering', players: lotoMakeBots(roomName, kinh), called: [],
+          winner: null, createdAt: new Date().toISOString(),
+        };
+        lotoByRoom.set(roomName, state);
+        lotoBroadcast(roomName);
+        break;
+      }
+      case 'loto-join': {
+        const roomName = ROOMS[String(msg.room ?? '').toLowerCase()];
+        if (!roomName || ws.room !== roomName) return wsSend(ws, { type: 'error', code: 'not-in-room', message: 'Bạn chưa vào phòng này.' });
+        const state = lotoStateOf(roomName);
+        if (!state) return wsSend(ws, { type: 'error', code: 'no-round', message: 'Chưa có vòng Lô Tô nào đang mở.' });
+        if (state.status !== 'registering') return wsSend(ws, { type: 'error', code: 'loto-calling', message: 'Vòng đã bắt đầu kêu số, không chốt số được nữa.' });
+        const nums = Array.isArray(msg.numbers) ? msg.numbers.map(Number) : [];
+        const valid = nums.length === state.kinh
+          && new Set(nums).size === nums.length
+          && nums.every((n) => Number.isInteger(n) && n >= 1 && n <= 90);
+        if (!valid) return wsSend(ws, { type: 'error', code: 'bad-numbers', message: `Chốt đủ ${state.kinh} số khác nhau từ 01 đến 90.` });
+        const ticket = [...nums].sort((a, b) => a - b);
+        const i = state.players.findIndex((p) => p.userId === ws.user.sub && !p.bot);
+        const player = { userId: ws.user.sub, name: ws.user.name, numbers: ticket, bot: false };
+        if (i >= 0) state.players[i] = player; else state.players.push(player);
+        lotoBroadcast(roomName);
+        break;
+      }
+      case 'loto-start': {
+        const roomName = ROOMS[String(msg.room ?? '').toLowerCase()];
+        if (!roomName || ws.room !== roomName) return wsSend(ws, { type: 'error', code: 'not-in-room', message: 'Bạn chưa vào phòng này.' });
+        const state = lotoStateOf(roomName);
+        if (!state) return wsSend(ws, { type: 'error', code: 'no-round', message: 'Chưa có vòng Lô Tô nào đang mở.' });
+        if (state.hostId !== ws.user.sub && ws.user.rank !== 'qtv') return wsSend(ws, { type: 'error', code: 'not-host', message: 'Chỉ người tạo vòng (hoặc QTV) mới bắt đầu kêu số.' });
+        if (state.status !== 'registering') return wsSend(ws, { type: 'error', code: 'loto-calling', message: 'Vòng đã bắt đầu rồi.' });
+        state.status = 'calling';
+        lotoBroadcast(roomName);
+        break;
+      }
+      case 'loto-called': {
+        const roomName = ROOMS[String(msg.room ?? '').toLowerCase()];
+        if (!roomName || ws.room !== roomName) return wsSend(ws, { type: 'error', code: 'not-in-room', message: 'Bạn chưa vào phòng này.' });
+        const state = lotoStateOf(roomName);
+        if (!state) return wsSend(ws, { type: 'error', code: 'no-round', message: 'Chưa có vòng Lô Tô nào đang mở.' });
+        if (state.hostId !== ws.user.sub && ws.user.rank !== 'qtv') return wsSend(ws, { type: 'error', code: 'not-host', message: 'Chỉ người tạo vòng (hoặc QTV) mới kêu số.' });
+        if (state.status !== 'calling') return wsSend(ws, { type: 'error', code: 'loto-calling', message: 'Vòng chưa bắt đầu kêu số.' });
+        const number = Number(msg.number);
+        if (!Number.isInteger(number) || number < 1 || number > 90) return wsSend(ws, { type: 'error', code: 'bad-numbers', message: 'Số kêu phải từ 01 đến 90.' });
+        if (state.called.includes(number)) return wsSend(ws, { type: 'error', code: 'already-called', message: `Số ${number} đã kêu rồi.` });
+        state.called.push(number);
+        wsBroadcast(roomName, { type: 'loto-called', room: roomName, number });
+        const winner = lotoCheckKinh(state);
+        if (winner) lotoFinish(roomName, state, winner);
+        else lotoBroadcast(roomName);
+        break;
+      }
+      case 'loto-kinh': {
+        const roomName = ROOMS[String(msg.room ?? '').toLowerCase()];
+        if (!roomName || ws.room !== roomName) return wsSend(ws, { type: 'error', code: 'not-in-room', message: 'Bạn chưa vào phòng này.' });
+        const state = lotoStateOf(roomName);
+        if (!state) return wsSend(ws, { type: 'error', code: 'no-round', message: 'Chưa có vòng Lô Tô nào đang mở.' });
+        if (state.status !== 'calling') return wsSend(ws, { type: 'error', code: 'loto-calling', message: 'Vòng chưa bắt đầu kêu số.' });
+        const me = state.players.find((p) => p.userId === ws.user.sub && !p.bot);
+        if (!me) return wsSend(ws, { type: 'error', code: 'bad-numbers', message: 'Bạn chưa chốt số ở vòng này.' });
+        const called = new Set(state.called);
+        if (!me.numbers.every((n) => called.has(n))) return wsSend(ws, { type: 'error', code: 'bad-numbers', message: 'Số của bạn chưa đủ để KINH.' });
+        lotoFinish(roomName, state, me);
+        break;
+      }
+      case 'loto-close': {
+        const roomName = ROOMS[String(msg.room ?? '').toLowerCase()];
+        if (!roomName || ws.room !== roomName) return wsSend(ws, { type: 'error', code: 'not-in-room', message: 'Bạn chưa vào phòng này.' });
+        const state = lotoStateOf(roomName);
+        if (!state) return wsSend(ws, { type: 'error', code: 'no-round', message: 'Chưa có vòng Lô Tô nào đang mở.' });
+        if (state.hostId !== ws.user.sub && !MANAGER_RANKS.has(ws.user.rank)) return wsSend(ws, { type: 'error', code: 'not-host', message: 'Chỉ người tạo vòng hoặc QTV/BĐH mới đóng được vòng.' });
+        lotoByRoom.delete(roomName);
+        wsBroadcast(roomName, { type: 'loto-closed', room: roomName });
+        lotoBroadcast(roomName);
         break;
       }
       default:
@@ -552,6 +701,7 @@ const server = http.createServer(async (req, res) => {
         legacyToken: LEGACY_TOKEN, users: Object.keys(users).length,
         livekitUrl: LIVEKIT_URL, time: new Date().toISOString(),
         ws: true, connections: wss.clients.size, rooms: allRooms().length,
+        lotoRounds: lotoByRoom.size,
       });
     }
 

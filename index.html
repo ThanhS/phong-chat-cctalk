@@ -1210,16 +1210,26 @@
          thì trang chuyển sang CHẾ ĐỘ MÁY CHỦ THẬT: danh sách người online,
          tin nhắn và danh sách phòng đều lấy từ máy chủ nên 2 máy (điện
          thoại + PC) thấy giống hệt nhau và chat chung được. Máy chủ còn
-         tự sinh BOT cho đông vui (~35 bot/phòng): presence và message của
-         bot có thêm trường bot:true + gender — trang hiển thị bot như
+         tự sinh BOT cho đông vui (10 bot/phòng): presence và message của
+         bot có thêm trường bot:true + gender — trang hiển thị đúng số bot
+         máy chủ gửi về, KHÔNG tự sinh thêm bot ở chế độ máy chủ; bot có
+         thêm trường bot:true + gender — trang hiển thị bot như
          người thường (màu tên + icon theo giới tính) kèm tag "BOT" xám.
+         Cấp áo BĐH cũng đồng bộ qua hub: cấp áo gửi {type:'set-rank'}
+         lên máy chủ, máy chủ lưu vào kho tài khoản rồi phát
+         {type:'rank-changed'} cho mọi máy (người được cấp giữ áo khi
+         đổi phòng); số người online mỗi phòng lấy từ {type:'room-counts'}
+         máy chủ phát khi có người vào/ra/tạo/xóa phòng.
          Chưa nhập địa chỉ máy chủ / nối thất bại / mất kết nối quá số lần
          thử lại thì GIỮ NGUYÊN chế độ bot demo cũ (mỗi máy tự sinh bot).
          Hàng đợi mic vẫn chạy local từng máy. Lô Tô ĐÃ đồng bộ qua hub:
          trạng thái vòng lấy từ máy chủ (room-state có trường loto, thay
          đổi phát qua loto-state / loto-called / loto-kinh / loto-closed)
          — xem khối "LÔ TÔ ĐỒNG BỘ QUA MÁY CHỦ" ở phần Lô Tô bên dưới. */
-      var hub = { ws:null, mode:"off", attempts:0, intentional:false, demoSnapshot:null, everOn:false };
+      var hub = { ws:null, mode:"off", attempts:0, intentional:false, demoSnapshot:null, everOn:false, counts:{} };
+      /* hub.counts: slug phòng -> số người online (người thật + bot) mới
+         nhất máy chủ phát qua 'room-counts' — cột trái ở chế độ máy chủ
+         hiển thị số này cho MỌI phòng, kể cả phòng mình không ở trong đó */
       /* Đang ở "phía máy chủ": đã nối thật, hoặc đang nối lại sau khi đã
          từng nối thật — lúc này chat / tạo / xóa phòng vẫn đi đường hub
          (gửi không được thì báo đang nối lại), không rơi về bot local */
@@ -1295,6 +1305,78 @@
         r.members = (d.members || []).map(hubMemberLocal);
         renderRoomList(); updateOnline();
       }
+      /* Số người online mỗi phòng do MÁY CHỦ phát ({type:'room-counts',
+         counts:[{room, count}]}): lưu lại theo slug phòng rồi vẽ lại cột
+         trái — nhờ vậy máy đang ở phòng này vẫn thấy đúng số người của
+         các phòng khác theo thời gian thực, không còn hiện 0 / số cũ. */
+      function hubApplyRoomCounts(d){
+        if(!Array.isArray(d.counts)) return;
+        d.counts.forEach(function(c){ if(c && c.room) hub.counts[c.room] = Math.max(0, parseInt(c.count, 10) || 0); });
+        renderRoomList();
+      }
+      /* Số hiển thị cạnh mỗi phòng ở cột trái: chế độ máy chủ lấy từ
+         room-counts mới nhất của máy chủ; chưa có số của phòng đó (hoặc
+         đang ở chế độ demo) thì dùng số đếm local như trước. */
+      function roomDisplayCount(r){
+        if(typeof hubActive === "function" && hubActive()){
+          var slug = hubRoomSlug(r);
+          if(slug && hub.counts[slug] != null) return hub.counts[slug];
+        }
+        return r.members.length;
+      }
+      /* Áp cấp bậc máy chủ (qtv / bdh-den / bdh-vang / bdh-tim / member)
+         lên một member local — cùng quy tắc hiển thị với hubMemberLocal:
+         đổi cả tag, màu áo (grant) và nguồn cấp để màu tên + huy hiệu +
+         áo cập nhật ngay, không phải chờ presence lần sau. */
+      function applyServerRank(m, rank){
+        rank = String(rank || "member").toLowerCase();
+        if(rank === "qtv"){ m.tag = "QTV"; m.grant = null; m.grantedBy = null; }
+        else if(rank === "bdh-den"){ m.tag = "BĐH"; m.grant = null; m.grantedBy = null; }
+        else if(rank === "bdh-vang"){ m.tag = "BĐH"; m.grant = "yellow"; m.grantedBy = "black"; }
+        else if(rank === "bdh-tim"){ m.tag = "BĐH"; m.grant = "purple"; m.grantedBy = "black"; }
+        else { if(m.tag === "BĐH") m.tag = null; m.grant = null; m.grantedBy = null; }
+      }
+      function serverRankLabel(rank){
+        rank = String(rank || "member").toLowerCase();
+        if(rank === "qtv") return "QTV (áo đỏ)";
+        if(rank === "bdh-den") return "BĐH (áo đen)";
+        if(rank === "bdh-vang") return "BĐH (áo vàng)";
+        if(rank === "bdh-tim") return "BĐH (áo tím)";
+        return "thành viên thường";
+      }
+      /* Máy chủ báo có người vừa được cấp / gỡ áo ({type:'rank-changed',
+         userId, name, rank}): cập nhật NGAY cấp bậc của người đó ở mọi
+         sảnh họ đang có mặt (danh sách thành viên), vẽ lại hàng đợi mic /
+         sân khấu của sảnh hiện tại (quyền quản lý hàng đợi phụ thuộc cấp
+         bậc), và nếu người đó là CHÍNH MÌNH thì cập nhật luôn quyền của
+         mình: huy hiệu trên thanh người dùng, nút tạo phòng, chuyển chế
+         độ, thêm vào hàng đợi... (renderRoomList đã gọi lại các hàm đó). */
+      function hubApplyRankChanged(d){
+        if(!d || !d.userId) return;
+        var found = false;
+        rooms.forEach(function(r){
+          r.members.forEach(function(m){
+            if(m.srvId === d.userId){ applyServerRank(m, d.rank); found = true; }
+          });
+        });
+        var isMe = !!(state.userId && d.userId === state.userId);
+        if(isMe){
+          var rk = String(d.rank || "member").toLowerCase();
+          state.role = rk === "qtv" ? "admin" : "user";
+          state.memberTag = (rk === "bdh-den" || rk === "bdh-vang" || rk === "bdh-tim") ? "BĐH" : null;
+          state.grant = rk === "bdh-vang" ? "yellow" : rk === "bdh-tim" ? "purple" : null;
+          var badge = $("userRoleBadge");
+          if(badge){
+            badge.textContent = isAdmin() ? "QTV" : (state.memberTag === "BĐH" ? (state.grant === "yellow" ? "BĐH · VÀNG" : state.grant === "purple" ? "BĐH · TÍM" : "BĐH") : "THÀNH VIÊN");
+            badge.classList.toggle("user", !isAdmin());
+          }
+          if(authProfile && authProfile.id === state.userId){ authProfile.rank = rk; saveAuthSession(authSession, authProfile); }
+          toast("Cấp bậc của bạn vừa được máy chủ đổi thành: " + serverRankLabel(rk));
+        } else if(found && d.name){
+          toast(d.name + " vừa được đổi cấp bậc thành: " + serverRankLabel(d.rank));
+        }
+        renderRoomList(); renderQueue(); updateNowSpeaking(); updateOnline();
+      }
       /* Danh sách phòng từ máy chủ: 4 phòng mặc định (208 là phòng chính
          ở đầu trang — không phải sảnh nên bỏ qua) + phòng tự tạo (ID từ
          104). Phòng tự tạo nào không còn trên máy chủ thì gỡ khỏi cột
@@ -1344,6 +1426,7 @@
       function hubEnterDemoMode(notify){
         hub.mode = "off";
         hub.everOn = false;
+        hub.counts = {};
         hubSetStatus();
         if(hub.demoSnapshot){
           try{ rooms = JSON.parse(hub.demoSnapshot); }catch(e){}
@@ -1385,6 +1468,12 @@
           hubApplyRoomState(d);
         } else if(d.type === "presence"){
           hubApplyPresence(d);
+        } else if(d.type === "room-counts"){
+          /* Số người online mỗi phòng theo thời gian thực từ máy chủ */
+          hubApplyRoomCounts(d);
+        } else if(d.type === "rank-changed"){
+          /* Có người vừa được cấp / gỡ áo BĐH trên máy chủ — đồng bộ ngay */
+          hubApplyRankChanged(d);
         } else if(d.type === "loto-state"){
           /* Trạng thái vòng Lô Tô của phòng thay đổi — vẽ lại cửa sổ Lô Tô theo máy chủ */
           var lsr = hubRoomBySlug(d.room);
@@ -1796,7 +1885,7 @@
             + '<span class="chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg></span>'
             + '<span class="rinfo"><span class="rname">'+esc(r.name)+'</span></span>'
             + (r.unread && r.id!==state.roomId ? '<span class="unread">'+r.unread+"</span>" : "")
-            + '<span class="count">'+r.members.length+"</span>"
+            + '<span class="count">'+roomDisplayCount(r)+"</span>"
             + "</button>"
             + (isAdmin() ? '<button class="room-edit-btn" data-edit="'+r.id+'" aria-label="Sửa sảnh '+esc(r.name)+' — đổi tên sảnh" title="Sửa tên của riêng sảnh này — không đổi tên phòng chính ở đầu trang">'+editSVG+"</button>" : "")
             + "</div>"
@@ -2415,11 +2504,33 @@
         }
         formError($("mmError"), "");
         var oldGrantVal = grantValueOf(m);
+        var wantGrantVal = editingMemberRef.canGrant ? ($("mmGrant").value || "") : oldGrantVal;
+        /* CHẾ ĐỘ MÁY CHỦ: cấp áo KHÔNG đổi local nữa — gửi
+           {type:'set-rank', userId, rank} lên hub để máy chủ lưu vào kho
+           tài khoản và phát 'rank-changed' cho mọi máy; áo chỉ thật sự
+           đổi khi máy chủ xác nhận (hubApplyRankChanged), nên người được
+           cấp giữ áo cả khi đổi phòng / đăng nhập lại. Máy chủ từ chối
+           (forbidden / bad-rank / bad-user) thì hub báo lỗi qua toast và
+           không có gì thay đổi. Chế độ demo (không nối máy chủ) vẫn cấp
+           áo local như cũ bằng applyGrant ở dưới. */
+        var srvGrantPending = false;
+        if(hubActive() && editingMemberRef.canGrant && wantGrantVal !== oldGrantVal){
+          if(m.bot || !m.srvId){
+            formError($("mmError"), "Người này là BOT của máy chủ — BOT không có tài khoản nên không cấp áo được.");
+            return;
+          }
+          var srvRank = wantGrantVal === "black" ? "bdh-den" : wantGrantVal === "yellow" ? "bdh-vang" : wantGrantVal === "purple" ? "bdh-tim" : "member";
+          if(!hubSend({ type: "set-rank", userId: m.srvId, rank: srvRank })){
+            formError($("mmError"), "Chưa nối được máy chủ chat — chờ vài giây cho kết nối ổn định rồi bấm Lưu lại.");
+            return;
+          }
+          srvGrantPending = true;
+        }
         if(editingMemberRef.canEdit){
           m.name = newName;
           m.gender = $("mmGender").value === "F" ? "F" : "M";
         }
-        if(editingMemberRef.canGrant) applyGrant(m, $("mmGrant").value || "", viewerRankInRoom(r));
+        if(editingMemberRef.canGrant && !srvGrantPending) applyGrant(m, wantGrantVal, viewerRankInRoom(r));
         /* Đồng bộ những nơi đang giữ tên cũ: hàng chờ lên mic, sân khấu, trạng thái đang nói */
         r.queue = r.queue.map(function(n){ return n===oldName ? newName : n; });
         if(r.stage && r.stage.name===oldName) r.stage.name = newName;
@@ -2444,7 +2555,9 @@
           else if(newGrantVal==="purple") sysHere(state.user + " đã cấp áo tím — lên BĐH cho " + m.name + " — từ giờ hiện logo BĐH cạnh tên");
           else sysHere(state.user + " đã thu hồi áo quản lý của " + m.name + " — về thành viên thường");
         }
-        toast(grantChanged
+        toast(srvGrantPending
+          ? "Đã gửi yêu cầu đổi áo của " + m.name + " lên máy chủ — áo sẽ cập nhật trên mọi máy ngay khi máy chủ xác nhận"
+          : grantChanged
           ? "Đã cập nhật áo của " + m.name + (newGrantVal==="black" ? " — áo đen, lên BĐH" : newGrantVal==="yellow" ? " — áo vàng, lên BĐH (hiện logo BĐH)" : newGrantVal==="purple" ? " — áo tím, lên BĐH (hiện logo BĐH)" : " — đã thu hồi áo, về thành viên thường")
           : "Đã cập nhật " + m.name + " trong danh sách phòng");
       });

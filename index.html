@@ -27,6 +27,7 @@
         }
       }
       html,body{height:100%;}
+      html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
       body{margin:0;font-family:"Be Vietnam Pro",system-ui,sans-serif;background:var(--bg);color:var(--ink);}
       button{font-family:inherit;cursor:pointer;}
       input,select{font-family:inherit;}
@@ -53,6 +54,7 @@
       .room-avatar{width:56px;height:56px;border-radius:10px;flex:none;background:radial-gradient(circle at 30% 25%,#ffd98a,#e07b24 55%,#8a3b12);display:grid;place-items:center;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35);overflow:hidden;}
       .room-avatar img{width:100%;height:100%;object-fit:cover;}
       .room-avatar .initial{font-size:1.5rem;font-weight:800;color:#fff;}
+      .room-info{flex:1 1 auto;min-width:0;}
       .room-title{font-size:1.12rem;font-weight:800;color:#d98a16;letter-spacing:.01em;}
       .room-title-row{display:flex;align-items:center;gap:.5rem;}
       .head-edit-btn{display:none;width:36px;height:36px;flex:none;border:1px solid var(--line);background:var(--blue-soft);color:var(--blue-deep);border-radius:9px;place-items:center;}
@@ -177,12 +179,24 @@
       .member.me .mname{font-weight:800;}
       .ava{width:24px;height:24px;border-radius:6px;flex:none;display:grid;place-items:center;color:#fff;font-size:.68rem;font-weight:800;}
       .side-note{padding:.55rem .7rem;font-size:.76rem;color:var(--muted);border-top:1px solid var(--line);background:var(--panel-2);}
+      /* Ô giới thiệu cấp bậc & quyền hạn — nằm trong trang chính, cuối cột trái */
+      .rank-box{padding:.6rem .7rem .65rem;font-size:.78rem;line-height:1.5;border-top:1px solid var(--line);background:var(--panel-2);color:var(--ink);}
+      .rank-box .rank-title{font-size:.7rem;font-weight:800;letter-spacing:.06em;color:var(--blue-deep);margin-bottom:.4rem;}
+      @media (prefers-color-scheme: dark){ .rank-box .rank-title{color:#6fc2f2;} }
+      .rank-row{display:flex;gap:.45rem;align-items:flex-start;margin-top:.28rem;}
+      .rank-row .shirt-dot{width:11px;height:11px;border-radius:50%;flex:none;margin-top:.24rem;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55),0 0 0 1px rgba(0,0,0,.18);}
+      .shirt-dot.red{background:#d92c1f;}
+      .shirt-dot.black{background:#23272b;}
+      .shirt-dot.yellow{background:#e8a90c;}
+      .shirt-dot.purple{background:#8e44ad;}
+      .shirt-dot.member{background:#9db6c4;}
+      .rank-box .rank-note{margin-top:.45rem;color:var(--muted);font-size:.92em;}
 
       /* Queue / stage panel (chế độ xếp hàng — làm theo ảnh mẫu ccTalk mục 05) */
       .queue-panel{display:none;border-bottom:1px solid var(--line);background:var(--panel-2);padding:.55rem .8rem .7rem;}
       .queue-panel.show{display:block;}
       .queue-toolbar{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;margin-bottom:.6rem;}
-      .qpill{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:.34rem .85rem;font-size:.83rem;font-weight:700;min-height:2rem;display:inline-flex;align-items:center;gap:.35rem;}
+      .qpill{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:.34rem .85rem;font-size:.83rem;font-weight:700;min-height:2rem;display:inline-flex;align-items:center;gap:.35rem;white-space:nowrap;}
       .qpill:hover{background:var(--blue-soft);}
       .qpill.primary{background:linear-gradient(180deg,#93cf4b,#6aa814);color:#fff;border-color:transparent;}
       .qpill.primary:hover{filter:brightness(1.06);}
@@ -363,11 +377,6 @@
       .announce{display:flex;gap:.55rem;align-items:flex-start;background:#fff3c4;border:1.5px solid #d9a92c;border-radius:10px;padding:.55rem .8rem;margin:.55rem 0;font-weight:800;color:#6b4e00;font-size:.96rem;line-height:1.5;}
       .announce svg{flex:none;color:#c22f1d;margin-top:.15rem;}
       @media (prefers-color-scheme: dark){ .announce{background:#3a2f10;color:#f2d98a;border-color:#6b5716;} .announce svg{color:#ff8a7a;} }
-      .voice-msg{display:inline-flex;align-items:center;gap:.55rem;background:var(--blue-soft);border:1px solid var(--line);border-radius:999px;padding:.32rem .8rem .32rem .4rem;margin-top:.2rem;}
-      .voice-msg .play{width:34px;height:34px;border-radius:50%;border:0;background:var(--blue);color:#fff;display:grid;place-items:center;flex:none;}
-      .voice-msg .vwave{display:flex;align-items:center;gap:2px;}
-      .voice-msg .vwave i{width:3px;background:var(--blue);border-radius:2px;}
-      .voice-msg .vdur{font-size:.8rem;color:var(--muted);font-weight:700;}
       .banner{display:flex;gap:.6rem;align-items:center;background:#fff6d8;border-top:1px solid #ecd28a;border-bottom:1px solid #ecd28a;color:#7a5b00;padding:.5rem .9rem;font-size:.9rem;}
       @media (prefers-color-scheme: dark){ .banner{background:#3a2f10;color:#f2d98a;border-color:#6b5716;} }
       .banner b{color:#c22f1d;}
@@ -439,8 +448,6 @@
       .vb-btn{display:flex;align-items:center;gap:.4rem;background:none;border:0;color:var(--ink);font-size:.88rem;font-weight:600;padding:.4rem .5rem;border-radius:8px;}
       .vb-btn:hover{background:var(--blue-soft);}
       .vb-btn.on{color:var(--blue-deep);}
-      .rec-dot{width:10px;height:10px;border-radius:50%;background:var(--red);display:none;}
-      .recording .rec-dot{display:block;animation:pulse .6s infinite alternate;}
       .talk-hint{display:none;width:100%;text-align:center;font-size:.84rem;color:var(--red);font-weight:700;}
       .talk-hint.show{display:block;}
 
@@ -462,6 +469,8 @@
       .form-error.show{display:block;}
       @media (prefers-color-scheme: dark){ .form-error{background:#3d1712;color:#ff9d94;border-color:#6e2a22;} }
       .join-btn{width:100%;margin-top:1.2rem;background:linear-gradient(180deg,#1aa3e8,#0d84c6);color:#fff;border:0;border-radius:10px;padding:.75rem;font-size:1rem;font-weight:800;}
+      .join-btn[disabled]{opacity:.55;cursor:not-allowed;}
+      .auth-server-hint{font-size:.78rem;color:var(--muted);margin-top:.35rem;line-height:1.45;}
       .join-btn:hover{filter:brightness(1.07);}
       .join-btn.green{background:linear-gradient(180deg,#93cf4b,#6aa814);}
       .demo-box{margin-top:1rem;background:var(--blue-soft);border:1px dashed var(--blue);border-radius:10px;padding:.6rem .8rem;font-size:.85rem;line-height:1.55;}
@@ -516,10 +525,64 @@
         .app.hide-top .roomhead>div:not(.room-actions){display:none;}
         .app.hide-top .queue-panel{display:none!important;}
         .app.hide-bottom .voicebar .mic-status{display:none;}
-        .app.hide-bottom .voicebar #musicBtn,.app.hide-bottom .voicebar #recBtn,.app.hide-bottom .voicebar #compactBtn{display:none;}
+        .app.hide-bottom .voicebar #musicBtn,.app.hide-bottom .voicebar #compactBtn{display:none;}
         .app.hide-bottom .banner{display:none;}
         .topbar .back span{display:none;}
         .user-chip{max-width:38vw;}
+        /* Cân bằng lại size chữ trên mobile: chữ nhỏ và đều hơn, các nhãn
+           quan trọng giữ NGUYÊN 1 HÀNG (nowrap + ... khi quá dài) để bố cục
+           không bị nhảy hàng / vỡ dòng khi màn hình hẹp */
+        .topbar{gap:.4rem;padding:.3rem .5rem;}
+        .user-chip{font-size:.8rem;padding:.18rem .55rem .18rem .2rem;}
+        .user-chip .uava{width:25px;height:25px;font-size:.72rem;}
+        .role-badge{font-size:.58rem;padding:.12rem .4rem;}
+        .top-ico{width:36px;height:36px;}
+        .roomhead{gap:.55rem;padding:.5rem .65rem;}
+        .room-title{font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .room-meta{font-size:.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:.12rem;}
+        .room-actions{gap:.35rem;flex:none;}
+        .round-btn{width:38px;height:38px;}
+        /* Header phòng giữ NGUYÊN 1 HÀNG trên mobile: không cho cụm nút
+           hành động rớt xuống hàng dưới tạo khoảng trống hai bên */
+        .roomhead{flex-wrap:nowrap;}
+        .room-title-row{min-width:0;}
+        .room-title-row .room-title{flex:1 1 auto;min-width:0;}
+        .rank-box{font-size:.74rem;padding:.55rem .6rem .6rem;}
+        .chat-tools{gap:.4rem;padding:.4rem .55rem;}
+        .mode-select{font-size:.8rem;padding:.28rem .55rem;}
+        .mode-lock-hint{font-size:.72rem;}
+        .now-speaking{font-size:.78rem;white-space:nowrap;}
+        .chat-tools .qpill{font-size:.76rem;padding:.3rem .6rem;}
+        .cooldown-badge{font-size:.7rem;}
+        .qpill{font-size:.78rem;padding:.32rem .7rem;}
+        .stage-card{padding:.6rem .7rem;gap:.7rem;min-height:100px;}
+        .stage-card .silhouette{width:64px;height:64px;}
+        .stage-card .sname{font-size:.95rem;}
+        .stage-card .smeta{font-size:.8rem;gap:.7rem;}
+        .heart-btn{font-size:.82rem;padding:.38rem .8rem;}
+        .ext-btn{font-size:.8rem;padding:.38rem .7rem;}
+        .queue-list .ql-title{font-size:.72rem;}
+        .queue-list ol{font-size:.83rem;}
+        .msg{font-size:.92rem;}
+        .msg .who{font-size:.8rem;}
+        .announce{font-size:.88rem;}
+        .banner{font-size:.82rem;padding:.45rem .65rem;}
+        .voicebar{gap:.5rem;padding:.45rem .6rem;}
+        .vb-btn{font-size:.8rem;padding:.35rem .4rem;}
+        .talk-mode button{font-size:.78rem;padding:.34rem .6rem;}
+        .ptt{white-space:nowrap;}
+        .mic-status{font-size:.76rem;}
+        .talk-hint{font-size:.78rem;}
+        .member{font-size:.85rem;padding-left:1.2rem;}
+        .room-row{font-size:.88rem;}
+        .search-row input{font-size:.84rem;}
+        .add-room-btn{font-size:.86rem;}
+        .admin-bar .ab-title{font-size:.68rem;}
+        .side-note{font-size:.72rem;}
+        .rs-note{font-size:.78rem;}
+        .game-title{font-size:.94rem;}
+        .gi-row{font-size:.85rem;}
+        .loto-status{font-size:.74rem;}
       }
       @media (prefers-reduced-motion: reduce){
         *{animation:none!important;transition:none!important;}
@@ -534,7 +597,11 @@
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M12 2c1 3.5-2.5 5-2.5 8a4.5 4.5 0 0 0 9 0c0-1.2-.5-2.2-1.2-3.2C16.6 8.6 17 10 15.8 11 15 9 13.5 5.5 12 2Z" fill="#fff"/><path d="M12 22a6.5 6.5 0 0 1-6.5-6.5c0-2 .8-3.4 1.7-4.8.4 1 1 1.7 1.9 2.2C8.7 11.6 9 10.4 9.6 9c1 2.3 3.4 3.3 3.4 6.5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
         </div>
         <h1>Phòng chat cộng đồng</h1>
-        <p>Đăng nhập bằng ID và mật khẩu để vào phòng. Chưa có tài khoản thì bấm tab Đăng ký, tạo ID mới là vào được ngay.</p>
+        <p>Đăng nhập bằng ID và mật khẩu để vào phòng — tài khoản do máy chủ kiểm tra, trang không giữ mật khẩu nào. Chưa có tài khoản thì bấm tab Đăng ký, tạo ID mới là vào được ngay.</p>
+
+        <label for="authServerInput">Máy chủ đăng nhập</label>
+        <input type="text" id="authServerInput" maxlength="120" placeholder="Ví dụ: https://token.example.com" autocomplete="off" spellcheck="false" />
+        <div class="auth-server-hint">Địa chỉ token-server của phòng — cũng là máy chủ cấp token voice, dùng chung 1 địa chỉ cho cả đăng nhập và voice. Chỉ cần nhập 1 lần trên máy này, trang tự nhớ cho các lần sau.</div>
 
         <div class="auth-tabs" role="tablist">
           <button id="tabLogin" class="sel" type="button">Đăng nhập</button>
@@ -544,19 +611,11 @@
         <!-- Đăng nhập -->
         <form id="loginForm" autocomplete="off">
           <label for="loginId">ID đăng nhập</label>
-          <input type="text" id="loginId" maxlength="24" placeholder="Ví dụ: admin" />
+          <input type="text" id="loginId" maxlength="24" placeholder="Nhập ID của bạn" />
           <label for="loginPass">Mật khẩu</label>
           <input type="password" id="loginPass" maxlength="40" placeholder="Nhập mật khẩu của bạn" />
           <div class="form-error" id="loginError"></div>
           <button class="join-btn" id="loginBtn" type="submit">Đăng nhập &amp; vào phòng</button>
-          <div class="demo-box">
-            Tài khoản <b>QTV (áo đỏ)</b> có sẵn để test quyền cao nhất hệ thống:<br/>
-            ID: <code>admin</code> · Mật khẩu: <code>admin123</code><br/>
-            Tài khoản <b>BĐH (áo đen)</b> để test quyền điều hành: ID: <code>bdh</code> · Mật khẩu: <code>bdh123</code><br/>
-            Phân quyền mới: <b>Đỏ = QTV</b> — toàn quyền cao nhất, cấm chat / khóa mic được mọi cấp. <b>Đen = BĐH</b> — toàn quyền nhưng <b>không</b> cấm chat / khóa mic được áo đỏ. <b>Vàng = BĐH</b> — toàn quyền nhưng <b>không</b> cấm được đỏ và đen. <b>Tím = BĐH</b> — toàn quyền nhưng <b>không</b> cấm được đỏ, đen và vàng. Áo vàng / tím do áo đen cấp sẽ hiện thêm <b>logo BĐH</b> cạnh tên.<br/>
-            Bấm vào tên từng người để đổi tên / giới tính, cấp áo, cấm chat, cấm mic, thêm / xóa họ khỏi hàng xếp hàng. QTV và BĐH (đen, vàng, tím) đều có nút Tạo room mới, nút Thêm user vào xếp hàng và Cài đặt phòng (set thời gian chờ comment).<br/>
-            <b>Chuyển 3 chế độ</b> trò chuyện (Tự do / Xếp hàng / Chỉ BĐH nói) và nút <b>Giữ mic</b> cũng <b>chỉ QTV và BĐH mới dùng được</b> — đăng nhập bằng ID thành viên thường sẽ thấy ô chọn chế độ bị khóa và bấm Giữ mic sẽ bị chặn.
-          </div>
         </form>
 
         <!-- Đăng ký -->
@@ -578,7 +637,6 @@
           <button class="join-btn green" id="regBtn" type="submit">Đăng ký &amp; vào phòng</button>
         </form>
 
-        <div class="login-note">Bản test chạy trên trang này, chưa có máy chủ thật: tài khoản đăng ký và phòng tạo mới chỉ có hiệu lực trong lần mở trang này, tắt trang là mất.</div>
       </div>
     </div>
 
@@ -668,7 +726,7 @@
       <!-- Room header -->
       <div class="roomhead">
         <div class="room-avatar" id="roomAvatar" aria-hidden="true"></div>
-        <div>
+        <div class="room-info">
           <div class="room-title-row">
             <div class="room-title" id="roomTitle">[208] Giao Lưu Kết Bạn</div>
             <button class="head-edit-btn" id="roomEditHeaderBtn" type="button" aria-label="Admin: sửa tên PHÒNG chính, không liên quan tới các sảnh bên dưới" title="Admin: sửa tên của PHÒNG chính — riêng với các sảnh ở cột trái">
@@ -712,6 +770,15 @@
             </button>
           </div>
           <div class="room-list" id="roomList"></div>
+          <div class="rank-box" id="rankBox">
+            <div class="rank-title">CẤP BẬC &amp; QUYỀN HẠN TRONG PHÒNG</div>
+            <div class="rank-row"><span class="shirt-dot red"></span><span><b>Đỏ — QTV:</b> quyền cao nhất. Cấm chat / khóa mic được mọi cấp, cấp áo cho BĐH, tạo phòng mới, đổi chế độ trò chuyện và cài đặt phòng.</span></div>
+            <div class="rank-row"><span class="shirt-dot black"></span><span><b>Đen — BĐH:</b> điều hành phòng như QTV nhưng <b>không</b> cấm chat / khóa mic được áo đỏ. Cấp được áo vàng và áo tím.</span></div>
+            <div class="rank-row"><span class="shirt-dot yellow"></span><span><b>Vàng — BĐH:</b> điều hành phòng, <b>không</b> cấm được áo đỏ và áo đen. Cấp được áo tím.</span></div>
+            <div class="rank-row"><span class="shirt-dot purple"></span><span><b>Tím — BĐH:</b> điều hành phòng, <b>không</b> cấm được áo đỏ, đen và vàng. Không cấp áo cho người khác.</span></div>
+            <div class="rank-row"><span class="shirt-dot member"></span><span><b>Thành viên thường:</b> chat, lên mic theo chế độ của phòng, thả tim, chơi lô tô — không có quyền quản lý.</span></div>
+            <div class="rank-note">Áo vàng / tím do QTV hoặc áo đen cấp sẽ hiện thêm logo BĐH cạnh tên. Bấm vào tên từng người trong danh sách để xem các quyền áp dụng cho người đó.</div>
+          </div>
           <div class="col-resizer" id="colResizer" role="separator" aria-orientation="vertical" aria-label="Kéo để mở rộng hoặc thu hẹp cột danh sách thành viên" title="Kéo để mở rộng / thu hẹp cột danh sách — tên dài sẽ hiện đầy đủ hơn"></div>
         </aside>
 
@@ -868,8 +935,8 @@
               <input type="range" id="volSlider" min="0" max="100" value="70" aria-label="Âm lượng" />
             </div>
             <div class="talk-mode" role="group" aria-label="Chế độ nói chuyện">
-              <button id="tmPtt" type="button" class="sel" title="Như ccTalk gốc: giữ phím F2 hoặc giữ nút mic để nói, thả ra là gửi đoạn thoại">Giữ F2 để nói</button>
-              <button id="tmFree" type="button" title="Nói tự do: chọn nút này là mic tự mở ngay, nói thoải mái không cần giữ F2 và không cần bấm thêm nút mic — ngừng nói khoảng 1,4 giây là đoạn thoại tự gửi vào phòng">Nói tự do</button>
+              <button id="tmPtt" type="button" class="sel" title="Như ccTalk gốc: giữ phím F2 hoặc giữ nút mic để nói trực tiếp, thả ra là dừng nói">Giữ F2 để nói</button>
+              <button id="tmFree" type="button" title="Nói tự do: chọn nút này là mic tự mở ngay, nói thoải mái trực tiếp như gọi điện, không cần giữ F2 và không cần bấm thêm nút mic">Nói tự do</button>
             </div>
             <button class="ptt" id="pttBtn">
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M6 9h.8M10 9h.8M14 9h.8M18 9h.8M6 13h.8M18 13h.8M9 13h6"/></svg>
@@ -884,20 +951,15 @@
               <span class="lk-dot" id="lkDot"></span>
               Máy chủ voice
             </button>
-            <button class="vb-btn" id="recBtn">
-              <span class="rec-dot"></span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>
-              <span id="recLabel">Ghi âm</span>
-            </button>
             <button class="vb-btn" id="compactBtn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5L3 12l6 7M15 5l6 7-6 7"/></svg>
               Rút gọn
             </button>
-            <div class="talk-hint" id="talkHint">Bạn đang nói... thả ra để gửi đoạn thoại vào phòng</div>
+            <div class="talk-hint" id="talkHint">Bạn đang nói trực tiếp... thả ra để dừng nói</div>
             <div class="mic-status" id="micStatusRow">
               <span id="micStatus">🎤 Mic: chưa bật — lần đầu bấm nói, trình duyệt sẽ hỏi quyền dùng mic của điện thoại / máy tính, hãy bấm Cho phép (Allow).</span>
               <span class="meter" aria-hidden="true"><i id="micLevelFill"></i></span>
-              <span class="mic-note" id="lkNote">Chưa nối voice trực tiếp — đoạn thoại hiện chỉ ghi bằng mic thật trên máy của bạn và phát lại ngay trên máy đó bằng nút Play, người ở máy khác chưa nghe bạn nói trực tiếp được. Bấm nút “Máy chủ voice” trên thanh này: chọn chế độ PeerJS nhanh để nói trực tiếp giữa các máy không cần máy chủ, hoặc chọn LiveKit và nhập địa chỉ máy chủ voice của bạn.</span>
+              <span class="mic-note" id="lkNote">Voice trực tiếp đang tự nối bằng PeerJS — điện thoại và máy tính vào cùng phòng này sẽ nghe nhau trực tiếp như gọi điện, không qua ghi âm gửi đoạn.</span>
             </div>
           </div>
 
@@ -934,7 +996,7 @@
               <div class="talk-mode" role="group" aria-label="Chế độ voice trực tiếp">
                 <button id="vmPeer" type="button" title="Không cần máy chủ của bạn: chỉ cấp quyền mic, vào cùng phòng là điện thoại + máy tính nghe nhau trực tiếp (mesh P2P qua máy chủ giới thiệu miễn phí 0.peerjs.com). Hợp phòng 2–6 người.">PeerJS nhanh</button>
                 <button id="vmLivekit" type="button" title="Dùng máy chủ LiveKit của bạn (gói cctalk-voice-server) — hợp phòng đông, ổn định lâu dài">LiveKit</button>
-                <button id="vmOff" type="button" title="Tắt voice trực tiếp — ghi / phát lại đoạn thoại trên máy của bạn như cách cũ">Chưa nối</button>
+                <button id="vmOff" type="button" title="Tắt voice trực tiếp — các máy trong phòng chưa nghe nhau được">Chưa nối</button>
               </div>
             </div>
             <div class="lk-status"><b>PeerJS nhanh:</b> không cần VPS / tài khoản — máy chủ giới thiệu miễn phí 0.peerjs.com chỉ giúp các máy tìm thấy nhau, tiếng đi thẳng từ máy này sang máy kia (nói trực tiếp như gọi điện, không phải ghi âm gửi đoạn) nên phòng 2–6 người nghe rõ nhất; phòng đông hãy dùng LiveKit. Nếu chưa nghe được nhau, xem dòng <b>Chẩn đoán PeerJS</b> ngay dưới nút Lưu &amp; kết nối — nó cho biết từng đường tiếng đang thông hay đang kẹt ở bước nào. <b>LiveKit:</b> điền địa chỉ máy chủ của bạn ở 2 ô dưới rồi bấm “Lưu &amp; kết nối”.</div>
@@ -949,7 +1011,7 @@
             <div class="lk-row">
               <button class="qpill primary" id="lkSaveBtn" type="button">Lưu &amp; kết nối</button>
               <button class="qpill danger" id="lkDiscBtn" type="button">Ngắt kết nối</button>
-              <span class="lk-status" id="lkStatus">Chưa cài máy chủ voice — trang đang chạy chế độ cũ: ghi / phát lại đoạn thoại trên chính máy của bạn.</span>
+              <span class="lk-status" id="lkStatus">Chưa cài máy chủ voice — voice trực tiếp chưa nối — chọn PeerJS nhanh hoặc LiveKit để các máy nghe nhau trực tiếp.</span>
             </div>
             <div class="lk-status" id="pjDiag"></div>
             <div class="lk-status">Chế độ LiveKit: phòng voice khớp theo sảnh đang ở: 208 → giao-luu-ket-ban · 101 → dai-sanh · 102 → giao-luu · 103 → ho-tro. QTV / BĐH được quyền nói luôn trên máy chủ; thành viên thường chỉ nghe và được cấp quyền nói khi đang trên mic. Máy chủ là gói <b>cctalk-voice-server</b> (LiveKit + token-server) — xem README của gói đó để chạy thử bằng Docker và đưa lên VPS. Chế độ PeerJS dùng cùng luật quyền nói đó ngay trong trang, không cần máy chủ.</div>
@@ -962,8 +1024,8 @@
 
     <!-- Thư viện LiveKit client (WebRTC) — nối phòng chat vào máy chủ voice
          LiveKit tự host của Thanh (gói ~/workspace/cctalk-voice-server/).
-         Nếu CDN này tải hỏng, trang vẫn chạy chế độ cũ (ghi / phát lại trên
-         máy mình) và phần cài đặt máy chủ voice sẽ báo rõ lỗi. -->
+         Nếu CDN này tải hỏng, voice trực tiếp qua LiveKit không nối được
+         và phần cài đặt máy chủ voice sẽ báo rõ lỗi. -->
     <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
     <!-- Thư viện PeerJS (WebRTC P2P) — chế độ voice nhanh: dùng máy chủ
          giới thiệu miễn phí 0.peerjs.com của PeerJS Cloud, tiếng đi thẳng
@@ -1006,21 +1068,6 @@
         else if(name==="click"){ tone(1900,0.035,"square",0.06); }
         else if(name==="error"){ tone(220,0.16,"sawtooth",0.08,0,160); }
       }
-      function playVoice(dur){
-        var ac = audio(); if(!ac) return;
-        var seconds = Math.min(Math.max(dur,0.4), 6);
-        var o = ac.createOscillator(), g = ac.createGain(), f = ac.createBiquadFilter();
-        o.type = "sawtooth"; f.type = "bandpass"; f.frequency.value = 900; f.Q.value = 2.2;
-        var t = ac.currentTime;
-        o.frequency.setValueAtTime(130, t);
-        for(var i=0;i<seconds*7;i++){ o.frequency.linearRampToValueAtTime(rand(95,190), t + (i+1)*(seconds/(seconds*7))); }
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(0.12*masterVol, t+0.06);
-        g.gain.setValueAtTime(0.12*masterVol, t+seconds-0.08);
-        g.gain.exponentialRampToValueAtTime(0.0001, t+seconds);
-        o.connect(f); f.connect(g); g.connect(ac.destination);
-        o.start(t); o.stop(t+seconds+0.05);
-      }
       var musicTimer = null, musicNodes = [];
       var CHORDS = [[261.6,329.6,392.0],[220.0,261.6,329.6],[174.6,220.0,261.6],[196.0,246.9,293.7]];
       var chordIdx = 0;
@@ -1043,19 +1090,91 @@
       function startMusic(){ playChord(); musicTimer = setInterval(playChord, 4600); }
       function stopMusic(){ if(musicTimer){ clearInterval(musicTimer); musicTimer = null; } musicNodes.forEach(function(o){ try{o.stop();}catch(e){} }); musicNodes = []; }
 
-      /* ================= Tài khoản (đăng ký / đăng nhập) =================
-         Bản test tĩnh: tài khoản giữ trong bộ nhớ của trang, chưa có máy chủ. */
-      var accounts = [
-        { id:"admin", pass:"admin123", name:"Quản Trị Viên", role:"admin", hue:5, gender:"M" },
-        { id:"bdh", pass:"bdh123", name:"BĐH ccTalk Đen", role:"user", hue:220, gender:"M", memberTag:"BĐH" },
-        { id:"thanh", pass:"123456", name:"ThanhS", role:"user", hue:210, gender:"M" }
-      ];
-      function findAccount(id){
-        var key = String(id||"").trim().toLowerCase();
-        for(var i=0;i<accounts.length;i++){ if(accounts[i].id.toLowerCase()===key) return accounts[i]; }
-        return null;
+      /* ================= Đăng nhập PHÍA MÁY CHỦ (token-server) =================
+         Trang KHÔNG còn giữ bất kỳ tài khoản / mật khẩu nào trong mã nguồn:
+         đăng nhập và đăng ký đều gọi token-server (POST /login, /register),
+         máy chủ kiểm tra mật khẩu đã băm phía máy chủ và trả về session
+         (hạn 6 giờ). Địa chỉ máy chủ đăng nhập nhập 1 lần ở màn hình đăng
+         nhập, lưu trên máy này (localStorage) — địa chỉ này cũng chính là
+         địa chỉ token-server dùng để xin token voice (/token) và báo
+         lên/xuống mic (/stage): cả 2 đều gửi kèm session qua header
+         Authorization: Bearer <session>, máy chủ tự lấy ID + cấp bậc từ
+         session, client không tự khai cấp bậc nữa. Session hết hạn (máy
+         chủ trả 401) thì trang xóa session và đưa về màn hình đăng nhập. */
+      var AUTH_LS = { server: "cctalk.serverUrl", session: "cctalk.session", profile: "cctalk.profile" };
+      var authServer = "";   /* địa chỉ máy chủ đăng nhập (= token-server) */
+      var authSession = "";  /* session hiện tại do máy chủ cấp */
+      var authProfile = null;/* { id, name, rank } của lần đăng nhập gần nhất */
+      try{
+        authServer = localStorage.getItem(AUTH_LS.server) || "";
+        authSession = localStorage.getItem(AUTH_LS.session) || "";
+        var savedProfile = localStorage.getItem(AUTH_LS.profile);
+        if(savedProfile) authProfile = JSON.parse(savedProfile);
+      }catch(e){}
+      function normalizeServerUrl(u){
+        var t = String(u || "").trim().replace(/\/+$/, "");
+        if(!t) return "";
+        if(t.indexOf("://") < 0) t = ((t.indexOf("localhost") >= 0 || t.indexOf("127.0.0.1") >= 0) ? "http://" : "https://") + t;
+        return t;
       }
-      var ID_RE = /^[A-Za-z0-9_-]+$/;
+      function saveAuthServer(u){
+        authServer = normalizeServerUrl(u);
+        try{
+          if(authServer) localStorage.setItem(AUTH_LS.server, authServer);
+          else localStorage.removeItem(AUTH_LS.server);
+        }catch(e){}
+        /* Dùng chung 1 địa chỉ: máy chủ đăng nhập = token-server voice —
+           đồng bộ sang biến cài đặt voice ngay trong phiên này (lkSettings
+           khởi tạo cũng ưu tiên đọc cctalk.serverUrl). */
+        if(typeof lkSettings !== "undefined") lkSettings.tokenUrl = authServer;
+        return authServer;
+      }
+      function saveAuthSession(session, profile){
+        authSession = session || "";
+        authProfile = profile || null;
+        try{
+          if(authSession) localStorage.setItem(AUTH_LS.session, authSession); else localStorage.removeItem(AUTH_LS.session);
+          if(authProfile) localStorage.setItem(AUTH_LS.profile, JSON.stringify(authProfile)); else localStorage.removeItem(AUTH_LS.profile);
+        }catch(e){}
+      }
+      function clearAuthSession(){ saveAuthSession("", null); }
+      /* Gọi API máy chủ đăng nhập: tự gắn session (nếu có) qua header
+         Authorization: Bearer. Trả về { status, ok, data } — lỗi mạng thì
+         promise bị reject để nơi gọi báo "không gọi được máy chủ". */
+      function authFetch(path, opts){
+        opts = opts || {};
+        var headers = { "Content-Type": "application/json" };
+        if(authSession) headers["Authorization"] = "Bearer " + authSession;
+        return fetch(authServer + path, { method: opts.method || "GET", headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined })
+          .then(function(res){
+            return res.json().catch(function(){ return null; }).then(function(data){ return { status: res.status, ok: res.ok, data: data }; });
+          });
+      }
+      /* Cấp bậc máy chủ trả về -> dạng tài khoản trang dùng để hiển thị:
+         qtv = QTV áo đỏ · bdh-den = BĐH áo đen · bdh-vang = BĐH áo vàng ·
+         bdh-tim = BĐH áo tím · member = thành viên thường. Máy chủ không
+         trả màu avatar / giới tính nên màu lấy cố định theo ID, giới tính
+         lấy theo lựa chọn lúc đăng ký trên máy này (mặc định Nam). */
+      function hueFromId(id){
+        var h = 0, s = String(id || "");
+        for(var i = 0; i < s.length; i++){ h = (h * 31 + s.charCodeAt(i)) >>> 0; }
+        return h % 360;
+      }
+      function savedGenderFor(id){
+        try{ return localStorage.getItem("cctalk.gender." + String(id || "").toLowerCase()) === "F" ? "F" : "M"; }catch(e){ return "M"; }
+      }
+      function saveGenderFor(id, gender){
+        try{ localStorage.setItem("cctalk.gender." + String(id || "").toLowerCase(), gender === "F" ? "F" : "M"); }catch(e){}
+      }
+      function accFromServer(d, gender){
+        var rank = String((d && d.rank) || "member").toLowerCase();
+        var acc = { id: d.id, name: d.name || d.id, role: rank === "qtv" ? "admin" : "user", memberTag: null, grant: null, gender: gender || savedGenderFor(d.id), hue: hueFromId(d.id) };
+        if(rank === "bdh-den"){ acc.memberTag = "BĐH"; }
+        else if(rank === "bdh-vang"){ acc.memberTag = "BĐH"; acc.grant = "yellow"; }
+        else if(rank === "bdh-tim"){ acc.memberTag = "BĐH"; acc.grant = "purple"; }
+        return acc;
+      }
+      var ID_RE = /^[A-Za-z0-9_]+$/;
 
       /* ================= Dữ liệu phòng: mặc định đúng 3 phòng ================= */
       var NAME_POOL = ["Zô Zanh","Toàn","xamrong","tien2169843000","tanty01230","Bảo","Ken_Ken","asdanhyeuem14","Gãu Khiêm AStrol","NhựtĐậpChai","Kfffffff","™Sóng Gió™","Hùng Bịp","Mèo Ú","Kaito Kid 99","bé Na 2k7","Cu Tí Hon","Anh Ba Khía","Sếp Tổng 88","Lão Hạc Gaming","Chị Bảy Điệu","Út Cưng","Phong Lữ Hành","Đạt 09","Kiều Anh","Minh Tuấn Pro","Sói Cô Đơn","Bé Bỏng","Hồng Nhung","Tuấn Anh 2k3","Hải Đăng 07","Mưa Rào","Cọp Giấy","Nắng Vàng","Tèo Em","Bin Nguyễn","Kẹo Ngọt 99","Hạt Dẻ Cười","Sư Tử Hà Đông","Anh Hùng Bàn Phím","Bé Heo","Mơ Mộng","Ngọc Trai Đen","Phê Pha","Quậy Banh Nóc","Tũn Tũn","Vịt Bầu","Xì Trum Nhỏ","Yến Nhi 2k6","Cá Mập Nhỏ","Dũng Sĩ 2k","Gió Đông","Long Đẹp Trai","Ốc Tiêu","Quân Tử","Rin Rin","Sầu Riêng","Ước Mơ Xanh","Zin Zin","Chú Cuội","Dế Mèn","Ếch Xanh","Giang Hồ Nhỏ","Kẻ Lữ Hành","Lính Mới 2k5","Ông Ngoại Online","Xuân Tóc Đỏ","Yêu Đời 88","Hiếu Thứ Hai","Em Là Ai"];
@@ -1239,7 +1358,7 @@
         openRooms: { "101": true },
         speaking: null,
         talking: false, talkStart: 0,
-        music: false, recording: false, recStart: 0, recTimer: null,
+        music: false,
         running: false, fav: false, grant: null,
         lastCommentAt: {}, /* roomId -> mốc thời gian comment gần nhất của chính user, để áp thời gian chờ comment của từng phòng */
         settingsOpen: false
@@ -1402,42 +1521,12 @@
         if(m.type==="announce"){
           return '<div class="announce"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10v4a1 1 0 0 0 1 1h2l4 4.5c.8.9 2 .3 2-.9V5.3c0-1.2-1.2-1.8-2-.9L6 9H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg><span>'+esc(m.text)+"</span></div>";
         }
-        if(m.type==="voice"){
-          var bars = "";
-          for(var i=0;i<14;i++){ bars += '<i style="height:'+Math.round(rand(5,17))+'px"></i>'; }
-          return '<div class="msg'+(m.me?" me":"")+'"><span class="who"><b>'+esc(m.name)+"</b> "+esc(m.time)+'</span><br/>'
-            + '<span class="voice-msg"><button class="play" data-voice="'+m.dur+'"'+(m.audioUrl ? ' data-audio="'+m.audioUrl+'"' : '')+' aria-label="Nghe đoạn thoại"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5-11-6.5Z"/></svg></button>'
-            + '<span class="vwave">'+bars+'</span><span class="vdur">'+m.dur.toFixed(1)+'s</span></span></div>';
-        }
         return '<div class="msg'+(m.me?" me":"")+'"><span class="who"><b>'+esc(m.name)+"</b> "+esc(m.time)+'</span><br/><span class="text '+(m.cls||"c-plain")+'">'+esc(m.text)+"</span></div>";
       }
       function renderMessages(){
         var box = $("messages");
         box.innerHTML = currentRoom().messages.map(msgHTML).join("");
-        bindVoiceButtons(box);
         box.scrollTop = box.scrollHeight;
-      }
-      function bindVoiceButtons(scope){
-        scope.querySelectorAll("[data-voice]").forEach(function(btn){
-          btn.addEventListener("click", function(){
-            var dur = parseFloat(btn.getAttribute("data-voice"));
-            var au = btn.getAttribute("data-audio");
-            btn.style.opacity = ".55";
-            if(au){
-              /* Đoạn thoại ghi bằng MIC THẬT — phát lại file tiếng thật đã ghi */
-              var a = new Audio(au);
-              a.volume = masterVol;
-              a.onended = function(){ btn.style.opacity = "1"; };
-              a.onerror = function(){ btn.style.opacity = "1"; };
-              var pr = a.play();
-              if(pr && pr.catch) pr.catch(function(){ btn.style.opacity = "1"; playVoice(dur); });
-              setTimeout(function(){ btn.style.opacity = "1"; }, Math.min(Math.max(dur,0.4),30)*1000 + 600);
-            } else {
-              playVoice(dur);
-              setTimeout(function(){ btn.style.opacity = "1"; }, Math.min(dur,6)*1000);
-            }
-          });
-        });
       }
       function addMessage(roomId, m, opts){
         opts = opts || {};
@@ -1449,7 +1538,6 @@
           var div = document.createElement("div");
           div.innerHTML = msgHTML(m);
           while(div.firstChild) box.appendChild(div.firstChild);
-          bindVoiceButtons(box);
           box.scrollTop = box.scrollHeight;
           if(opts.sound) sfx(opts.sound);
         } else if(m.type==="msg"){
@@ -1569,36 +1657,118 @@
         lkAutoConnect();
         $("chatInput").focus();
       }
+      /* ----- Cổng máy chủ đăng nhập: chưa nhập địa chỉ máy chủ thì nút
+         Đăng nhập / Đăng ký hiện rõ "Chưa nhập địa chỉ máy chủ đăng nhập"
+         và không bấm được. ----- */
+      var AUTH_BTN_LABEL = { login: "Đăng nhập & vào phòng", reg: "Đăng ký & vào phòng" };
+      function refreshAuthGate(){
+        var has = !!normalizeServerUrl($("authServerInput").value);
+        [["loginBtn", AUTH_BTN_LABEL.login], ["regBtn", AUTH_BTN_LABEL.reg]].forEach(function(pair){
+          var btn = $(pair[0]); if(!btn) return;
+          btn.disabled = !has;
+          btn.textContent = has ? pair[1] : "Chưa nhập địa chỉ máy chủ đăng nhập";
+        });
+      }
+      function commitAuthServerInput(){
+        var norm = saveAuthServer($("authServerInput").value);
+        if(norm) $("authServerInput").value = norm;
+        refreshAuthGate();
+        return norm;
+      }
+      function setAuthBusy(busy, which){
+        if(busy){
+          var btn = $(which === "reg" ? "regBtn" : "loginBtn");
+          if(btn){ btn.disabled = true; btn.textContent = which === "reg" ? "Đang đăng ký…" : "Đang đăng nhập…"; }
+        } else refreshAuthGate();
+      }
+      (function(){
+        var inp = $("authServerInput");
+        if(inp){
+          inp.value = authServer;
+          inp.addEventListener("input", refreshAuthGate);
+          inp.addEventListener("change", commitAuthServerInput);
+        }
+        refreshAuthGate();
+      })();
+      /* Session hết hạn / bị máy chủ từ chối (401 ở /me, /token, /stage):
+         xóa session đã lưu trên máy và đưa về màn hình đăng nhập. */
+      function sessionExpired(){
+        clearAuthSession();
+        if(!state.user){
+          showAuthTab("login");
+          $("loginOverlay").classList.remove("hidden");
+          formError($("loginError"), "Phiên đăng nhập đã hết hạn — đăng nhập lại để vào phòng.");
+          return;
+        }
+        try{ stopAllTalk(); }catch(e){}
+        try{ lkDisconnect(true); }catch(e){}
+        try{ pjDisconnect(true); }catch(e){}
+        rooms.forEach(function(r){ r.members = r.members.filter(function(m){ return !m.me; }); r.unread = 0; });
+        state.user = null; state.userId = null; state.role = "user"; state.speaking = null; state.grant = null; state.memberTag = null;
+        $("userChip").classList.remove("show");
+        showAuthTab("login");
+        $("loginOverlay").classList.remove("hidden");
+        formError($("loginError"), "Phiên đăng nhập đã hết hạn (máy chủ trả 401) — đăng nhập lại để vào phòng.");
+        renderRoomList(); updateOnline();
+      }
       $("loginForm").addEventListener("submit", function(e){
         e.preventDefault();
+        var base = commitAuthServerInput();
+        if(!base){ formError($("loginError"), "Chưa nhập địa chỉ máy chủ đăng nhập — nhập địa chỉ token-server ở ô “Máy chủ đăng nhập” phía trên trước đã."); return; }
         var id = $("loginId").value.trim();
         var pass = $("loginPass").value;
         if(!id || !pass){ formError($("loginError"), "Nhập đủ ID và mật khẩu đã. Chưa có tài khoản thì bấm tab Đăng ký ở trên."); return; }
-        var acc = findAccount(id);
-        if(!acc){ formError($("loginError"), "ID \"" + id + "\" chưa được đăng ký. Bấm tab Đăng ký để tạo tài khoản mới bằng ID này."); return; }
-        if(acc.pass !== pass){ formError($("loginError"), "Sai mật khẩu cho ID \"" + acc.id + "\". Kiểm tra lại rồi thử lại nhé."); return; }
-        formError($("loginError"), "");
-        $("loginPass").value = "";
-        enterAs(acc);
+        setAuthBusy(true, "login");
+        authFetch("/login", { method: "POST", body: { id: id, password: pass } }).then(function(r){
+          setAuthBusy(false, "login");
+          if(r.ok && r.data && r.data.session){
+            formError($("loginError"), "");
+            $("loginPass").value = "";
+            saveAuthSession(r.data.session, { id: r.data.id, name: r.data.name, rank: r.data.rank });
+            enterAs(accFromServer(r.data));
+          } else {
+            /* Hiện đúng thông báo lỗi máy chủ trả về (sai ID/mật khẩu,
+               bị khóa tạm vì sai nhiều lần...) */
+            formError($("loginError"), (r.data && r.data.error) || ("Máy chủ đăng nhập trả lỗi HTTP " + r.status + " — thử lại sau."));
+          }
+        }).catch(function(){
+          setAuthBusy(false, "login");
+          formError($("loginError"), "Không gọi được máy chủ đăng nhập tại " + base + " — máy chủ chưa chạy, sai địa chỉ, hoặc kết nối bị chặn (CORS). Kiểm tra lại địa chỉ rồi thử lại.");
+        });
       });
       $("registerForm").addEventListener("submit", function(e){
         e.preventDefault();
+        var base = commitAuthServerInput();
+        if(!base){ formError($("regError"), "Chưa nhập địa chỉ máy chủ đăng nhập — nhập địa chỉ token-server ở ô “Máy chủ đăng nhập” phía trên trước đã."); return; }
         var id = $("regId").value.trim();
         var name = $("regName").value.trim();
         var pass = $("regPass").value;
         var pass2 = $("regPass2").value;
         if(id.length < 3){ formError($("regError"), "ID phải có ít nhất 3 ký tự."); return; }
-        if(!ID_RE.test(id)){ formError($("regError"), "ID chỉ được dùng chữ cái, số, dấu - và dấu _ (không dấu, không khoảng trắng)."); return; }
-        if(findAccount(id)){ formError($("regError"), "ID \"" + id + "\" đã có người đăng ký rồi. Chọn ID khác nhé."); return; }
+        if(!ID_RE.test(id)){ formError($("regError"), "ID chỉ được dùng chữ cái, số và dấu _ (không dấu, không khoảng trắng, không dấu -)."); return; }
         if(!name){ formError($("regError"), "Nhập tên hiển thị trong phòng đã."); return; }
         if(pass.length < 6){ formError($("regError"), "Mật khẩu phải có ít nhất 6 ký tự."); return; }
         if(pass !== pass2){ formError($("regError"), "Hai ô mật khẩu chưa giống nhau. Nhập lại nhé."); return; }
-        formError($("regError"), "");
-        var acc = { id:id, pass:pass, name:name, role:"user", gender: $("regGender").value === "F" ? "F" : "M", hue: Math.floor(rand(0,360)) };
-        accounts.push(acc);
-        $("regPass").value = ""; $("regPass2").value = "";
-        toast("Đăng ký thành công ID \"" + id + "\" — đang vào phòng...");
-        enterAs(acc);
+        var gender = $("regGender").value === "F" ? "F" : "M";
+        setAuthBusy(true, "reg");
+        /* Đăng ký ở máy chủ chỉ tạo THÀNH VIÊN THƯỜNG — máy chủ cấp luôn
+           session để vào phòng ngay, không cần đăng nhập lại. */
+        authFetch("/register", { method: "POST", body: { id: id, password: pass, name: name } }).then(function(r){
+          setAuthBusy(false, "reg");
+          if((r.status === 200 || r.status === 201) && r.data && r.data.session){
+            formError($("regError"), "");
+            $("regPass").value = ""; $("regPass2").value = "";
+            saveGenderFor(r.data.id, gender);
+            saveAuthSession(r.data.session, { id: r.data.id, name: r.data.name, rank: r.data.rank });
+            toast("Đăng ký thành công ID \"" + r.data.id + "\" — đang vào phòng...");
+            enterAs(accFromServer(r.data, gender));
+          } else {
+            formError($("regError"), (r.data && r.data.error) || ("Máy chủ đăng ký trả lỗi HTTP " + r.status + " — thử lại sau."));
+          }
+        }).catch(function(){
+          setAuthBusy(false, "reg");
+          formError($("regError"), "Không gọi được máy chủ đăng nhập tại " + base + " — máy chủ chưa chạy, sai địa chỉ, hoặc kết nối bị chặn (CORS). Kiểm tra lại địa chỉ rồi thử lại.");
+        });
       });
 
       /* ================= Admin: thêm / sửa / xóa phòng (chỉ tên + cài đặt comment — không có ô ID, không sửa logo) ================= */
@@ -1915,8 +2085,8 @@
           state.user = newName;
           state.gender = m.gender;
           state.grant = m.grant || null;
-          var acc = findAccount(state.userId);
-          if(acc){ acc.name = newName; acc.gender = m.gender; }
+          if(authProfile && authProfile.id === state.userId){ authProfile.name = newName; saveAuthSession(authSession, authProfile); }
+          saveGenderFor(state.userId, m.gender);
           $("userChipName").textContent = newName + " (" + state.userId + ")";
           $("userAva").textContent = newName.trim().charAt(0).toUpperCase();
         }
@@ -2400,38 +2570,32 @@
       }
 
       /* ================= Nói chuyện: 2 chế độ + MIC THẬT =================
+         Nói chuyện là TRAO ĐỔI TRỰC TIẾP trên mic như gọi điện thoại —
+         KHÔNG còn ghi đoạn thoại gửi vào phòng nữa (đã bỏ hẳn tính năng
+         gửi đoạn hội thoại / tin thoại vào khung chat).
          Chế độ 1 — GIỮ F2 ĐỂ NÓI (push-to-talk, như ccTalk gốc): giữ phím
-         F2 hoặc giữ nút mic thì nói, thả ra là đoạn thoại gửi vào phòng.
-         Chế độ 2 — NÓI TỰ DO (hands-free): chọn "Nói tự do" rồi bấm nút
-         mic 1 lần để MỞ mic — mic mở liên tục, cứ nói là trang tự nhận
-         tiếng, ngừng nói ~1,4 giây thì đoạn thoại tự gửi vào phòng, không
-         cần giữ F2 hay giữ nút gì cả. Bấm nút mic lần nữa để tắt.
+         F2 hoặc giữ nút mic thì nói trực tiếp, thả ra là dừng nói.
+         Chế độ 2 — NÓI TỰ DO (hands-free): chọn "Nói tự do" là mic TỰ MỞ
+         ngay, cứ nói là người trong phòng nghe trực tiếp, không cần giữ
+         F2 hay giữ nút gì cả. Bấm nút mic lần nữa để tắt.
          MIC THẬT: dùng getUserMedia của trình duyệt (WebRTC) — chạy trên
          cả ĐIỆN THOẠI (Chrome / Safari trên điện thoại) và MIC PC, chỉ cần
-         bấm Cho phép khi trình duyệt hỏi quyền mic. Tiếng nói ghi bằng
-         MediaRecorder thành đoạn thoại thật, bấm Play trong phòng là nghe
-         lại đúng giọng thật. Thước đo tiếng (thanh xanh lá dưới nút mic)
-         chạy theo độ lớn giọng nói thật qua bộ phân tích âm thanh.
-         MÁY CHỦ VOICE (LiveKit): nếu đã cài máy chủ voice ở nút "Máy chủ
-         voice" trên thanh này (địa chỉ LiveKit wss:// + token-server của
-         gói cctalk-voice-server), mic thật ở trên được PHÁT TRỰC TIẾP lên
-         máy chủ — người ở máy khác trong cùng phòng nghe qua loa theo
-         thời gian thực, và chỉ báo "Đang nói" chạy theo tiếng thật qua
-         máy chủ (xem mục LiveKit ở dưới). Khi CHƯA cài máy chủ thì giữ
-         nguyên cách cũ: đoạn thoại chỉ ghi / phát trên chính máy của
-         bạn, trang ghi rõ "Chưa nối máy chủ voice". Nếu máy không cấp
-         quyền mic hoặc trình duyệt không hỗ trợ thì tự lùi về tiếng mô
-         phỏng như trước để vẫn test được luồng nói. */
+         bấm Cho phép khi trình duyệt hỏi quyền mic. Tiếng đi trực tiếp
+         giữa các máy qua PeerJS (mặc định) hoặc qua máy chủ LiveKit nếu
+         đã cài — xem 2 mục voice trực tiếp ở dưới. Thước đo tiếng (thanh
+         xanh lá dưới nút mic) chạy theo độ lớn giọng nói thật qua bộ
+         phân tích âm thanh. Nếu máy không cấp quyền mic hoặc trình duyệt
+         không hỗ trợ thì chỉ báo "Đang nói" vẫn chạy để test được luồng. */
       var pttBtn = $("pttBtn");
       state.talkMode = "ptt"; /* "ptt" = giữ F2 | "free" = nói tự do */
       state.freeOn = false;
-      var voice = { stream:null, recorder:null, chunks:[], analyser:null, dataArr:null, raf:0, vad:0, segActive:false, silenceSince:0, segStart:0, perm:"unknown" };
+      var voice = { stream:null, analyser:null, dataArr:null, raf:0, perm:"unknown" };
       function micSetStatus(txt, cls){
         var el = $("micStatus"); if(!el) return;
         el.textContent = txt;
         el.className = cls || "";
       }
-      function micSupported(){ return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder); }
+      function micSupported(){ return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia); }
       /* Điều kiện được nói — dùng chung cho cả 2 chế độ: cấm mic, chế độ
          chỉ BĐH nói, và chế độ xếp hàng (phải đang ở trên mic) */
       function talkBlockReason(){
@@ -2494,73 +2658,6 @@
         }
         loop();
       }
-      function recMime(){
-        var types = ["audio/webm;codecs=opus","audio/webm","audio/mp4","audio/ogg;codecs=opus",""];
-        for(var i=0;i<types.length;i++){
-          if(!types[i]) return "";
-          try{ if(MediaRecorder.isTypeSupported(types[i])) return types[i]; }catch(e){}
-        }
-        return "";
-      }
-      /* Ghi 1 đoạn thoại bằng mic thật; khi đoạn dừng, finishSegment dựng
-         file tiếng và gửi vào phòng dưới dạng tin thoại nghe lại được */
-      function startSegment(){
-        if(!voice.stream || voice.segActive) return;
-        try{
-          var mt = recMime();
-          voice.recorder = mt ? new MediaRecorder(voice.stream, { mimeType: mt }) : new MediaRecorder(voice.stream);
-        }catch(e){ voice.recorder = null; return; }
-        voice.chunks = [];
-        voice.segActive = true;
-        voice.segStart = Date.now();
-        voice.recorder.ondataavailable = function(ev){ if(ev.data && ev.data.size) voice.chunks.push(ev.data); };
-        voice.recorder.onstop = finishSegment;
-        try{ voice.recorder.start(250); }catch(e){ voice.segActive = false; voice.recorder = null; }
-      }
-      function finishSegment(){
-        var rec = voice.recorder;
-        voice.recorder = null; voice.segActive = false;
-        var dur = (Date.now() - voice.segStart)/1000;
-        var url = null;
-        if(voice.chunks.length){
-          var blob = new Blob(voice.chunks, { type: (rec && rec.mimeType) || "audio/webm" });
-          if(blob.size > 1200) url = URL.createObjectURL(blob);
-        }
-        voice.chunks = [];
-        if(dur >= 0.4 && state.user){
-          addMessage(state.roomId, { type:"voice", name: state.user, dur: Math.round(dur*10)/10, time: timeNow(), me:true, audioUrl: url }, { sound:"send" });
-        } else if(state.talkMode==="ptt" && !state.freeOn){
-          toast("Giữ nút lâu hơn một chút (trên 0,4 giây) để gửi đoạn thoại");
-        }
-        if(state.freeOn) armVAD();
-      }
-      function stopSegment(){
-        if(voice.recorder && voice.segActive){ try{ voice.recorder.stop(); }catch(e){ voice.segActive = false; } }
-        else if(state.freeOn) armVAD();
-      }
-      /* Nhận diện tiếng nói cho chế độ tự do: có tiếng trên ngưỡng thì bắt
-         đầu ghi đoạn, im lặng liên tục ~1,4 giây thì cắt đoạn và gửi đi,
-         đoạn dài quá 60 giây cũng tự cắt — mic vẫn mở chờ câu nói tiếp */
-      function armVAD(){
-        stopVAD();
-        if(!state.freeOn || !voice.stream) return;
-        voice.silenceSince = 0;
-        voice.vad = setInterval(function(){
-          if(!state.freeOn){ stopVAD(); return; }
-          var lv = micLevel();
-          if(voice.segActive){
-            if(lv > 0.045){ voice.silenceSince = 0; }
-            else {
-              if(!voice.silenceSince) voice.silenceSince = Date.now();
-              else if(Date.now() - voice.silenceSince > 1400) stopSegment();
-            }
-            if(Date.now() - voice.segStart > 60000) stopSegment();
-          } else if(lv > 0.055){
-            startSegment();
-          }
-        }, 120);
-      }
-      function stopVAD(){ if(voice.vad){ clearInterval(voice.vad); voice.vad = 0; } }
       function updatePttLabel(){
         var lbl = $("pttLabel"); if(!lbl) return;
         var meM = myMemberIn(currentRoom());
@@ -2568,7 +2665,7 @@
         if(state.talkMode==="free"){
           lbl.textContent = state.freeOn ? "Mic đang mở — bấm để tắt mic" : "Bấm để mở mic — nói tự do";
         } else {
-          lbl.textContent = state.talking ? "Đang nói... thả ra để gửi" : "Nhấn giữ F2 để trò chuyện";
+          lbl.textContent = state.talking ? "Đang nói... thả ra để dừng" : "Nhấn giữ F2 để trò chuyện";
         }
       }
       function setTalkMode(mode){
@@ -2596,7 +2693,7 @@
             toast("Đã chuyển sang NÓI TỰ DO — được phép nói là mic tự mở, nói không cần giữ F2");
           }
         } else {
-          toast("Đã chuyển sang GIỮ F2 — giữ phím F2 hoặc giữ nút mic để nói, thả ra để gửi");
+          toast("Đã chuyển sang GIỮ F2 — giữ phím F2 hoặc giữ nút mic để nói trực tiếp, thả ra là dừng nói");
         }
       }
       $("tmPtt").addEventListener("click", function(){ setTalkMode("ptt"); });
@@ -2611,28 +2708,20 @@
         pttBtn.classList.add("talking");
         updatePttLabel();
         var hint = $("talkHint");
-        hint.textContent = "Bạn đang nói... thả ra để gửi đoạn thoại vào phòng";
+        hint.textContent = "Bạn đang nói trực tiếp... thả ra để dừng nói";
         hint.classList.add("show");
         renderRoomList(); updateNowSpeaking();
-        ensureMic(function(ok){ if(ok && state.talking && state.talkMode==="ptt") startSegment(); });
+        ensureMic(function(){});
         lkSyncStageRights(); lkSyncMic(); pjSyncMic();
       }
       function stopTalk(){
         if(!state.talking || state.talkMode==="free") return;
         state.talking = false;
-        var dur = (Date.now() - state.talkStart)/1000;
         state.speaking = null;
         pttBtn.classList.remove("talking");
         updatePttLabel();
         $("talkHint").classList.remove("show");
         renderRoomList(); updateNowSpeaking();
-        if(voice.segActive){
-          stopSegment(); /* onstop của MediaRecorder sẽ gửi đoạn thoại THẬT vào phòng */
-        } else if(dur >= 0.4){
-          addMessage(state.roomId, {type:"voice", name: state.user, dur: Math.round(dur*10)/10, time: timeNow(), me:true, audioUrl:null}, {sound:"send"});
-        } else {
-          toast("Giữ nút lâu hơn một chút (trên 0,4 giây) để gửi đoạn thoại");
-        }
         lkSyncMic(); lkSyncStageRights(); pjSyncMic();
       }
       /* Bật / tắt mic ở chế độ NÓI TỰ DO — bấm 1 lần mở mic, bấm lần nữa tắt */
@@ -2646,28 +2735,18 @@
           state.speaking = { roomId: state.roomId, name: state.user };
           pttBtn.classList.add("talking"); pttBtn.classList.add("free-on");
           var hint = $("talkHint");
-          hint.textContent = "Mic đang MỞ tự do — cứ nói bình thường, ngừng nói ~1,4 giây là đoạn thoại tự gửi vào phòng. Bấm nút mic lần nữa để tắt mic.";
+          hint.textContent = "Mic đang MỞ tự do — cứ nói bình thường, người trong phòng nghe trực tiếp như gọi điện. Bấm nút mic lần nữa để tắt mic.";
           hint.classList.add("show");
           updatePttLabel();
           renderRoomList(); updateNowSpeaking();
           toast("Đã mở mic tự do — nói không cần giữ F2. Bấm nút mic lần nữa để tắt.");
-          ensureMic(function(ok){
-            if(!state.freeOn) return;
-            if(ok) armVAD();
-          });
+          ensureMic(function(){});
           lkSyncStageRights(); lkSyncMic(); pjSyncMic();
         } else {
           state.freeOn = false; state.talking = false;
           state.speaking = null;
           pttBtn.classList.remove("talking"); pttBtn.classList.remove("free-on");
           $("talkHint").classList.remove("show");
-          stopVAD();
-          if(voice.segActive){
-            stopSegment();
-          } else if(voice.perm!=="granted" && (Date.now()-state.talkStart)/1000 >= 0.4){
-            var dur2 = (Date.now()-state.talkStart)/1000;
-            addMessage(state.roomId, {type:"voice", name: state.user, dur: Math.round(dur2*10)/10, time: timeNow(), me:true, audioUrl:null}, {sound:"send"});
-          }
           updatePttLabel();
           renderRoomList(); updateNowSpeaking();
           lkSyncMic(); lkSyncStageRights(); pjSyncMic();
@@ -2700,7 +2779,9 @@
          Nối trang vào gói máy chủ voice ~/workspace/cctalk-voice-server/:
          LiveKit server (SFU WebRTC) + token-server cấp JWT theo phòng và
          cấp bậc. Luồng: trang xin token ở token-server (GET /token?room=
-         <ID sảnh>&identity=<ID đăng nhập>&rank=<cấp bậc>) → vào phòng
+         <ID sảnh>, gửi kèm session đăng nhập qua header Authorization:
+         Bearer — máy chủ tự lấy ID + cấp bậc từ session, client không tự
+         khai rank) → vào phòng
          LiveKit trùng sảnh đang ở (208=giao-luu-ket-ban, 101=dai-sanh,
          102=giao-luu, 103=ho-tro) bằng livekit-client (CDN) → mic thật
          (chính stream getUserMedia ở mục trên) được publish lên phòng:
@@ -2710,32 +2791,42 @@
          sự kiện ActiveSpeakersChanged — tức theo TIẾNG THẬT qua máy chủ.
          QUYỀN NÓI do token-server quyết: QTV/BĐH publish luôn; thành
          viên thường chỉ subscribe, chỉ publish khi ĐANG TRÊN MIC — trang
-         báo lên/xuống mic qua POST /stage rồi xin token mới và nối lại
+         báo lên/xuống mic qua POST /stage (kèm session) rồi xin token mới và nối lại
          (token cũ không tự nâng quyền được). "Đang trên mic": ở chế độ
          xếp hàng là đang ở trên sân khấu; ở chế độ tự do / chỉ BĐH nói
          là lúc mic của bạn đang mở nói. Khi chưa cài máy chủ (chưa nhập
-         địa chỉ) hoặc nối hỏng: giữ nguyên cách cũ (ghi / phát lại đoạn
-         thoại trên máy mình) và dòng trạng thái ghi rõ chưa nối. */
+         địa chỉ) hoặc nối hỏng: voice trực tiếp chưa nối được và dòng
+         trạng thái ghi rõ chưa nối. */
       var lkSettings = { url: "", tokenUrl: "" };
       try{
         lkSettings.url = localStorage.getItem("cctalk.lkUrl") || "";
-        lkSettings.tokenUrl = localStorage.getItem("cctalk.tokenUrl") || "";
+        /* Địa chỉ token-server DÙNG CHUNG với máy chủ đăng nhập: ưu tiên
+           địa chỉ máy chủ đăng nhập đã lưu (cctalk.serverUrl) — 1 địa chỉ
+           cho cả đăng nhập lẫn xin token voice. */
+        lkSettings.tokenUrl = localStorage.getItem("cctalk.serverUrl") || localStorage.getItem("cctalk.tokenUrl") || "";
       }catch(e){}
       var lk = { room:null, connected:false, connecting:false, canPublish:false, roomSlug:"", pub:null, pubTrack:null, publishing:false, reportedStage:null, remoteSpeaker:null, audioBox:null, downTimer:0, syncBusy:false, syncQueued:false };
       var lkDevSuffix = Math.random().toString(36).slice(2, 6);
-      var LK_NOTE_OFF = "Chưa nối voice trực tiếp — đoạn thoại hiện chỉ ghi bằng mic thật trên máy của bạn và phát lại ngay trên máy đó bằng nút Play, người ở máy khác chưa nghe bạn nói trực tiếp được. Bấm nút “Máy chủ voice” trên thanh này: chọn chế độ PeerJS nhanh để nói trực tiếp giữa các máy không cần máy chủ, hoặc chọn LiveKit rồi nhập địa chỉ máy chủ voice của bạn.";
+      var LK_NOTE_OFF = "Chưa nối voice trực tiếp — người ở máy khác chưa nghe bạn nói trực tiếp được. Chọn chế độ PeerJS nhanh để nói trực tiếp giữa các máy không cần máy chủ, hoặc chọn LiveKit rồi nhập địa chỉ máy chủ voice của bạn.";
       /* Chế độ voice đang chọn trong panel "Máy chủ voice":
          "peerjs" = voice nhanh PeerJS (không cần máy chủ của bạn),
-         "livekit" = máy chủ LiveKit của bạn, "off" = chưa nối (cách cũ).
+         "livekit" = máy chủ LiveKit của bạn, "off" = chưa nối.
          Lưu trên máy này; lần đầu chưa lưu thì: đã từng cài LiveKit thì
          giữ LiveKit, chưa cài gì thì mặc định PeerJS nhanh. */
       var voiceMode = "peerjs";
       try{
-        voiceMode = localStorage.getItem("cctalk.voiceMode") || (lkSettings.tokenUrl ? "livekit" : "peerjs");
-      }catch(e){ voiceMode = lkSettings.tokenUrl ? "livekit" : "peerjs"; }
+        /* Mặc định LiveKit chỉ khi người dùng đã từng tự lưu địa chỉ
+           token-server trong panel voice (cctalk.tokenUrl) — địa chỉ máy
+           chủ đăng nhập dùng chung KHÔNG tự đổi chế độ voice mặc định,
+           để PeerJS nhanh vẫn là mặc định như trước. */
+        var panelTokenSaved = localStorage.getItem("cctalk.tokenUrl") || "";
+        voiceMode = localStorage.getItem("cctalk.voiceMode") || (panelTokenSaved ? "livekit" : "peerjs");
+      }catch(e){ voiceMode = "peerjs"; }
       if(["peerjs", "livekit", "off"].indexOf(voiceMode) < 0) voiceMode = "peerjs";
       function lkConfigured(){ return !!lkSettings.tokenUrl; }
-      function lkIdentity(){ return (state.userId || "guest") + "-" + lkDevSuffix; }
+      /* Identity trên LiveKit = ID đăng nhập: token do máy chủ cấp theo
+         session nên identity máy chủ dùng chính là ID tài khoản. */
+      function lkIdentity(){ return state.userId || "guest"; }
       function lkMyRank(){
         var r = currentRoom();
         var me = r ? myMemberIn(r) : null;
@@ -2761,13 +2852,20 @@
         n.textContent = "Đã nối máy chủ voice LiveKit — phòng voice “" + lk.roomSlug + "” khớp sảnh bạn đang ở: người ở máy khác vào cùng phòng sẽ nghe bạn nói trực tiếp qua loa, và bạn cũng nghe họ. Chỉ báo “Đang nói” chạy theo tiếng thật qua máy chủ." + (lk.canPublish ? "" : " Bạn đang ở quyền chỉ nghe trên máy chủ — lên mic (chế độ xếp hàng) là được cấp quyền nói.");
       }
       function lkFetchToken(cb){
-        var q = "room=" + encodeURIComponent(state.roomId)
-          + "&identity=" + encodeURIComponent(lkIdentity())
-          + "&name=" + encodeURIComponent(state.user || "")
-          + "&rank=" + encodeURIComponent(lkMyRank());
-        fetch(lkSettings.tokenUrl + "/token?" + q)
+        if(!authSession){ sessionExpired(); cb(null); return; }
+        /* Chỉ gửi room + session (header Authorization: Bearer): ID và
+           cấp bậc máy chủ tự lấy từ session — KHÔNG gửi rank do client
+           tự khai nữa. */
+        fetch(lkSettings.tokenUrl + "/token?room=" + encodeURIComponent(state.roomId), {
+          headers: { "Authorization": "Bearer " + authSession }
+        })
           .then(function(res){
             return res.json().catch(function(){ return null; }).then(function(data){
+              if(res.status === 401){
+                lkSetStatus("err", "Session đăng nhập đã hết hạn — máy chủ từ chối cấp token voice (401), đang đưa về màn hình đăng nhập.");
+                sessionExpired();
+                cb(null); return;
+              }
               if(!res.ok || !data || !data.token){
                 lkSetStatus("err", "Token-server từ chối cấp token: " + ((data && data.error) || ("HTTP " + res.status)) + " — kiểm tra lại địa chỉ token-server và phòng (máy chủ chỉ nhận 4 phòng 208 / 101 / 102 / 103).");
                 cb(null); return;
@@ -2776,7 +2874,7 @@
             });
           })
           .catch(function(){
-            lkSetStatus("err", "Không gọi được token-server tại " + lkSettings.tokenUrl + " — máy chủ chưa chạy, sai địa chỉ, hoặc bị chặn CORS. Trang tạm chạy chế độ cũ (ghi / phát lại trên máy của bạn).");
+            lkSetStatus("err", "Không gọi được token-server tại " + lkSettings.tokenUrl + " — máy chủ chưa chạy, sai địa chỉ, hoặc bị chặn CORS. Trang tạm chưa nối được voice trực tiếp.");
             cb(null);
           });
       }
@@ -2785,15 +2883,17 @@
          thành viên thì lần xin token sau sẽ rõ quyền. */
       function lkReportStage(onStage, cb, force){
         var done = function(){ if(cb) cb(); };
-        if(!lkConfigured() || !state.user){ done(); return; }
+        if(!lkConfigured() || !state.user || !authSession){ done(); return; }
         if(!force && lk.reportedStage === onStage){ done(); return; }
         lk.reportedStage = onStage;
         try{
+          /* Kèm session qua header Authorization: Bearer — máy chủ lấy
+             identity từ session, trang không gửi identity/rank tự khai. */
           fetch(lkSettings.tokenUrl + "/stage", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ room: state.roomId, identity: lkIdentity(), onStage: !!onStage })
-          }).then(function(){ done(); }, function(){ done(); });
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + authSession },
+            body: JSON.stringify({ room: state.roomId, onStage: !!onStage })
+          }).then(function(res){ if(res && res.status === 401) sessionExpired(); done(); }, function(){ done(); });
         }catch(e){ done(); }
       }
       function lkAudioBoxEl(){
@@ -2845,12 +2945,12 @@
           lk.room = null; lk.connected = false; lk.connecting = false;
           lk.pub = null; lk.pubTrack = null; lk.canPublish = false; lk.reportedStage = null;
           lkClearAudio();
-          lkSetStatus("err", "Đã mất kết nối tới máy chủ voice LiveKit. Bấm “Lưu & kết nối” để nối lại — trong lúc chưa nối, trang chạy chế độ cũ (ghi / phát lại trên máy của bạn).");
+          lkSetStatus("err", "Đã mất kết nối tới máy chủ voice LiveKit. Bấm “Lưu & kết nối” để nối lại — trong lúc chưa nối, trang chưa nối được voice trực tiếp.");
           var n = $("lkNote"); if(n) n.textContent = LK_NOTE_OFF;
         });
       }
       function lkConnect(){
-        if(!lkConfigured()){ lkSetStatus("", "Chưa cài máy chủ voice — trang đang chạy chế độ cũ: ghi / phát lại đoạn thoại trên chính máy của bạn."); return; }
+        if(!lkConfigured()){ lkSetStatus("", "Chưa cài máy chủ voice — voice trực tiếp chưa nối — chọn PeerJS nhanh hoặc LiveKit để các máy nghe nhau trực tiếp."); return; }
         if(!window.LivekitClient){ lkSetStatus("err", "Không tải được thư viện LiveKit từ CDN (mạng chặn hoặc mất mạng) — kiểm tra mạng rồi bấm “Lưu & kết nối” lại. Trang tạm chạy chế độ cũ."); return; }
         if(!state.user){ lkSetStatus("err", "Hãy đăng nhập trước — vào được phòng rồi trang mới nối voice theo ID và cấp bậc của bạn."); return; }
         if(lk.connecting) return;
@@ -2897,17 +2997,16 @@
         lk.pub = null; lk.pubTrack = null; lk.publishing = false;
         lk.canPublish = false; lk.reportedStage = null; lk.remoteSpeaker = null;
         lkClearAudio();
-        /* Trả track mic về trạng thái bật để chế độ cũ (ghi / phát lại
-           trên máy mình) không bị mất tiếng sau khi ngắt LiveKit */
+        /* Trả track mic về trạng thái bật sau khi ngắt LiveKit */
         if(voice.stream){ var lt = voice.stream.getAudioTracks()[0]; if(lt) lt.enabled = true; }
         if(!silent){
-          if(lkConfigured()) lkSetStatus("", "Đã ngắt kết nối voice — địa chỉ máy chủ vẫn được lưu trên máy này, bấm “Lưu & kết nối” để nối lại. Đoạn thoại tạm ghi / phát lại trên máy của bạn như cũ.");
-          else lkSetStatus("", "Chưa cài máy chủ voice — trang đang chạy chế độ cũ: ghi / phát lại đoạn thoại trên chính máy của bạn.");
+          if(lkConfigured()) lkSetStatus("", "Đã ngắt kết nối voice — địa chỉ máy chủ vẫn được lưu trên máy này, bấm “Lưu & kết nối” để nối lại. Voice trực tiếp đang tắt.");
+          else lkSetStatus("", "Chưa cài máy chủ voice — voice trực tiếp chưa nối — chọn PeerJS nhanh hoặc LiveKit để các máy nghe nhau trực tiếp.");
           var n = $("lkNote"); if(n) n.textContent = LK_NOTE_OFF;
         }
       }
-      /* Publish chính track mic thật (dùng chung với thước đo tiếng và
-         MediaRecorder ở mục voice) lên phòng LiveKit. Bật / tắt tiếng
+      /* Publish chính track mic thật (dùng chung với thước đo tiếng ở
+         mục voice) lên phòng LiveKit. Bật / tắt tiếng
          bằng track.enabled theo trạng thái đang nói — không publish lại
          mỗi lần bấm F2. */
       function lkMaybePublish(){
@@ -2990,7 +3089,7 @@
         if(tokIn) tokIn.value = lkSettings.tokenUrl;
         pjPaintModePills();
         if(voiceMode === "peerjs") lkSetStatus("", "Chế độ voice: PeerJS nhanh — đăng nhập vào phòng là trang tự nối voice trực tiếp giữa các máy (qua máy chủ giới thiệu miễn phí 0.peerjs.com), không cần máy chủ của bạn.");
-        else if(voiceMode === "off") lkSetStatus("", "Chế độ voice: chưa nối — trang chạy cách cũ: ghi / phát lại đoạn thoại trên chính máy của bạn. Chọn PeerJS nhanh hoặc LiveKit ở trên để nói trực tiếp giữa các máy.");
+        else if(voiceMode === "off") lkSetStatus("", "Chế độ voice: chưa nối — voice trực tiếp chưa nối — chọn PeerJS nhanh hoặc LiveKit để các máy nghe nhau trực tiếp. Chọn PeerJS nhanh hoặc LiveKit ở trên để nói trực tiếp giữa các máy.");
         else if(lkConfigured()) lkSetStatus("", "Đã lưu địa chỉ máy chủ voice trên máy này — trang sẽ tự kết nối khi bạn đăng nhập. Bấm “Lưu & kết nối” để nối ngay.");
         var vmP = $("vmPeer"), vmL = $("vmLivekit"), vmO = $("vmOff");
         if(vmP) vmP.addEventListener("click", function(){ setVoiceMode("peerjs"); });
@@ -3005,7 +3104,7 @@
         function saveAndConnect(){
           var u = (urlIn.value || "").trim().replace(/\/+$/, "");
           var t = (tokIn.value || "").trim().replace(/\/+$/, "");
-          if(voiceMode === "livekit" && !t){ lkSetStatus("err", "Chế độ LiveKit cần địa chỉ token-server — chưa nhập nên trang chưa nối máy chủ voice, vẫn chạy chế độ cũ (ghi / phát lại trên máy của bạn)."); tokIn.focus(); return; }
+          if(voiceMode === "livekit" && !t){ lkSetStatus("err", "Chế độ LiveKit cần địa chỉ token-server — chưa nhập nên trang chưa nối máy chủ voice, vẫn chưa nối được voice trực tiếp."); tokIn.focus(); return; }
           if(t && t.indexOf("://") < 0) t = "http://" + t;
           if(u && u.indexOf("://") < 0) u = ((u.indexOf("localhost") >= 0 || u.indexOf("127.0.0.1") >= 0) ? "ws://" : "wss://") + u;
           urlIn.value = u; tokIn.value = t;
@@ -3014,6 +3113,14 @@
             localStorage.setItem("cctalk.lkUrl", u);
             localStorage.setItem("cctalk.tokenUrl", t);
           }catch(e){}
+          /* Địa chỉ token-server cũng chính là máy chủ đăng nhập: đồng bộ
+             sang ô “Máy chủ đăng nhập” để 2 nơi luôn dùng chung 1 địa chỉ */
+          if(t){
+            authServer = t;
+            try{ localStorage.setItem("cctalk.serverUrl", t); }catch(e){}
+            var asi = $("authServerInput"); if(asi) asi.value = t;
+            refreshAuthGate();
+          }
           toast("Đã lưu cài đặt voice trên máy này cho lần mở sau");
           if(voiceMode === "peerjs"){
             if(state.user) pjConnect();
@@ -3023,7 +3130,7 @@
             if(state.user) lkConnect();
             else lkSetStatus("", "Đã lưu địa chỉ máy chủ voice — đăng nhập vào phòng là trang tự nối voice.");
           }
-          else lkSetStatus("", "Đã lưu cài đặt — chế độ voice đang là “Chưa nối”, trang chạy cách cũ (ghi / phát lại trên máy của bạn).");
+          else lkSetStatus("", "Đã lưu cài đặt — chế độ voice đang là “Chưa nối”, voice trực tiếp đang chưa nối.");
         }
         $("lkSaveBtn").addEventListener("click", saveAndConnect);
         [urlIn, tokIn].forEach(function(inp){
@@ -3031,7 +3138,7 @@
         });
         $("lkDiscBtn").addEventListener("click", function(){
           lkDisconnect(true); pjDisconnect(true);
-          lkSetStatus("", "Đã ngắt kết nối voice — trang chạy cách cũ: ghi / phát lại đoạn thoại trên chính máy của bạn. Chọn lại chế độ voice trong panel này để nối lại.");
+          lkSetStatus("", "Đã ngắt kết nối voice — voice trực tiếp chưa nối — chọn PeerJS nhanh hoặc LiveKit để các máy nghe nhau trực tiếp. Chọn lại chế độ voice trong panel này để nối lại.");
           var n = $("lkNote"); if(n) n.textContent = LK_NOTE_OFF;
           toast("Đã ngắt kết nối voice — cài đặt vẫn được lưu trên máy này");
         });
@@ -3095,8 +3202,8 @@
            chưa được quyền thì track mic bị tắt tiếng, chỉ nghe.
          - Hợp phòng nhỏ 2–6 người; phòng đông dùng chế độ LiveKit. Khi
            chưa chọn chế độ này, thư viện PeerJS tải hỏng, hoặc máy chủ
-           giới thiệu không nối được: giữ nguyên cách cũ (ghi / phát lại
-           đoạn thoại trên máy mình) và dòng trạng thái ghi rõ lý do. */
+           giới thiệu không nối được: voice trực tiếp chưa nối được và
+           dòng trạng thái ghi rõ lý do. */
       var PJ_OPTS = { host: "0.peerjs.com", port: 443, path: "/", secure: true, debug: 0,
         config: { iceServers: [
           { urls: "stun:stun.l.google.com:19302" },
@@ -3203,14 +3310,14 @@
       }
       function pjBrokerFail(err){
         pj.connecting = false;
-        lkSetStatus("err", "Không nối được máy chủ giới thiệu PeerJS (0.peerjs.com)" + (err && err.type ? " — lỗi: " + err.type : "") + ". Trang đang tự thử nối lại sau ít giây; nếu vẫn không được thì kiểm tra mạng (mạng chặn WebSocket tới 0.peerjs.com là không nối được). Tạm thời trang chạy chế độ cũ (ghi / phát lại đoạn thoại trên máy của bạn).");
+        lkSetStatus("err", "Không nối được máy chủ giới thiệu PeerJS (0.peerjs.com)" + (err && err.type ? " — lỗi: " + err.type : "") + ". Trang đang tự thử nối lại sau ít giây; nếu vẫn không được thì kiểm tra mạng (mạng chặn WebSocket tới 0.peerjs.com là không nối được). Tạm thời voice trực tiếp chưa nối được.");
         pjScheduleRejoin(6000);
       }
       function pjConnect(){
         if(voiceMode !== "peerjs" || !state.user) return;
         if(pj.peer || pj.connecting) return;
         if(!window.Peer){
-          lkSetStatus("err", "Không tải được thư viện PeerJS từ CDN (mạng chặn hoặc mất mạng) — kiểm tra mạng rồi chọn lại chế độ PeerJS. Trang tạm chạy chế độ cũ (ghi / phát lại đoạn thoại trên máy của bạn).");
+          lkSetStatus("err", "Không tải được thư viện PeerJS từ CDN (mạng chặn hoặc mất mạng) — kiểm tra mạng rồi chọn lại chế độ PeerJS. Tạm thời voice trực tiếp chưa nối được.");
           return;
         }
         pj.intentional = false;
@@ -3742,12 +3849,11 @@
         }
         pjTeardownPeer();
         pj.connecting = false; pj.everList = false;
-        /* Trả track mic về trạng thái bật để chế độ cũ ghi / phát lại
-           trên máy mình không bị mất tiếng sau khi ngắt PeerJS */
+        /* Trả track mic về trạng thái bật sau khi ngắt PeerJS */
         if(voice.stream){ var t = voice.stream.getAudioTracks()[0]; if(t) t.enabled = true; }
         var dg = $("pjDiag"); if(dg) dg.textContent = "";
         if(!silent){
-          lkSetStatus("", "Đã ngắt voice PeerJS — trang chạy cách cũ: ghi / phát lại đoạn thoại trên chính máy của bạn. Chọn lại chế độ PeerJS trong panel này để nối lại.");
+          lkSetStatus("", "Đã ngắt voice PeerJS — voice trực tiếp chưa nối — chọn PeerJS nhanh hoặc LiveKit để các máy nghe nhau trực tiếp. Chọn lại chế độ PeerJS trong panel này để nối lại.");
           var n = $("lkNote"); if(n) n.textContent = LK_NOTE_OFF;
         }
       }
@@ -3776,7 +3882,7 @@
           }
           toast("Chế độ voice: LiveKit — dùng máy chủ voice của bạn");
         } else {
-          lkSetStatus("", "Chế độ voice: chưa nối — trang chạy cách cũ: ghi / phát lại đoạn thoại trên chính máy của bạn.");
+          lkSetStatus("", "Chế độ voice: chưa nối — voice trực tiếp chưa nối — chọn PeerJS nhanh hoặc LiveKit để các máy nghe nhau trực tiếp.");
           var n = $("lkNote"); if(n) n.textContent = LK_NOTE_OFF;
           toast("Đã tắt voice trực tiếp — trang chạy chế độ cũ");
         }
@@ -4003,23 +4109,6 @@
         sfx("ding");
       });
       $("ytStopBtn").addEventListener("click", function(){ stopBeat(); toast("Đã dừng beat YouTube"); });
-      $("recBtn").addEventListener("click", function(){
-        state.recording = !state.recording;
-        $("voicebar").classList.toggle("recording", state.recording);
-        this.classList.toggle("on", state.recording);
-        if(state.recording){
-          state.recStart = Date.now();
-          state.recTimer = setInterval(function(){
-            var s = Math.floor((Date.now()-state.recStart)/1000);
-            $("recLabel").textContent = "Đang ghi " + String(Math.floor(s/60)).padStart(2,"0") + ":" + String(s%60).padStart(2,"0");
-          }, 500);
-          toast("Bắt đầu ghi âm phiên chat (mô phỏng)");
-        } else {
-          clearInterval(state.recTimer);
-          $("recLabel").textContent = "Ghi âm";
-          toast("Đã dừng ghi âm — bản test chưa lưu file thật");
-        }
-      });
       $("compactBtn").addEventListener("click", function(){
         if(window.innerWidth <= 820){
           var p = $("roomsPanel"); var open = p.classList.toggle("open");
@@ -4076,6 +4165,7 @@
       $("gameBtn").addEventListener("click", function(){ toggleLotoPanel(true); });
       $("leaveBtn").addEventListener("click", function(){
         stopAllTalk();
+        clearAuthSession();
         lkDisconnect();
         pjDisconnect(true);
         if(voice.stream){
@@ -4092,7 +4182,6 @@
         stopBeat();
         var stb = $("synthToggleBtn"); if(stb){ stb.textContent = "Bật nhạc nền có sẵn"; stb.classList.remove("active"); }
         var mp = $("musicPanel"); if(mp) mp.classList.remove("show");
-        if(state.recording){ clearInterval(state.recTimer); state.recording = false; $("voicebar").classList.remove("recording"); $("recLabel").textContent = "Ghi âm"; }
         rooms.forEach(function(r){ r.members = r.members.filter(function(m){ return !m.me; }); r.unread = 0; if(state.user){ r.queue = r.queue.filter(function(n){ return n!==state.user; }); if(r.stage && r.stage.name===state.user) r.stage = null; } });
         $("userChip").classList.remove("show");
         showAuthTab("login");
@@ -4767,6 +4856,23 @@
       renderMessages();
       updateOnline();
       showAuthTab("login");
+      /* Đã có session lưu trên máy này + đã có địa chỉ máy chủ: hỏi lại
+         máy chủ (GET /me, kèm session) — session còn hạn thì vào phòng
+         luôn không cần đăng nhập lại; hết hạn (401) thì xóa session và
+         ở lại màn hình đăng nhập; máy chủ chưa chạy tới thì cũng ở lại
+         màn hình đăng nhập, session vẫn giữ để lần sau thử lại. */
+      if(authServer && authSession){
+        authFetch("/me").then(function(r){
+          if(state.user) return;
+          if(r.ok && r.data && r.data.id){
+            saveAuthSession(authSession, { id: r.data.id, name: r.data.name, rank: r.data.rank });
+            enterAs(accFromServer(r.data));
+          } else if(r.status === 401){
+            clearAuthSession();
+            formError($("loginError"), "Phiên đăng nhập đã hết hạn — đăng nhập lại để vào phòng.");
+          }
+        }).catch(function(){ /* máy chủ chưa chạy tới — ở lại màn hình đăng nhập */ });
+      }
     })();
     </script>
   </body>

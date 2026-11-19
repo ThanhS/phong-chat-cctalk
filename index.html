@@ -179,18 +179,23 @@
       .member.me .mname{font-weight:800;}
       .ava{width:24px;height:24px;border-radius:6px;flex:none;display:grid;place-items:center;color:#fff;font-size:.68rem;font-weight:800;}
       .side-note{padding:.55rem .7rem;font-size:.76rem;color:var(--muted);border-top:1px solid var(--line);background:var(--panel-2);}
-      /* Ô giới thiệu cấp bậc & quyền hạn — nằm trong trang chính, cuối cột trái */
-      .rank-box{padding:.6rem .7rem .65rem;font-size:.78rem;line-height:1.5;border-top:1px solid var(--line);background:var(--panel-2);color:var(--ink);}
-      .rank-box .rank-title{font-size:.7rem;font-weight:800;letter-spacing:.06em;color:var(--blue-deep);margin-bottom:.4rem;}
-      @media (prefers-color-scheme: dark){ .rank-box .rank-title{color:#6fc2f2;} }
-      .rank-row{display:flex;gap:.45rem;align-items:flex-start;margin-top:.28rem;}
+      /* Nút huy hiệu cảnh sát (khiên vàng) trên thanh tiêu đề — mở popup cấp bậc & quyền hạn */
+      .rank-ico{border-color:#ffe9a8;background:linear-gradient(180deg,#ffd34d,#e8a90c);box-shadow:0 1px 5px rgba(0,0,0,.3);}
+      .rank-ico:hover{background:linear-gradient(180deg,#ffdd6e,#f0b41a);}
+      /* Popup giới thiệu cấp bậc & quyền hạn trong phòng */
+      .rank-card{position:relative;max-width:470px;font-size:.88rem;line-height:1.55;}
+      .rank-card .rank-title{font-size:.78rem;font-weight:800;letter-spacing:.06em;color:var(--blue-deep);margin:.15rem 2.2rem .55rem 0;}
+      @media (prefers-color-scheme: dark){ .rank-card .rank-title{color:#6fc2f2;} }
+      .rank-close{position:absolute;top:.6rem;right:.6rem;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);display:grid;place-items:center;padding:0;}
+      .rank-close:hover{background:var(--blue-soft);}
+      .rank-row{display:flex;gap:.45rem;align-items:flex-start;margin-top:.32rem;}
       .rank-row .shirt-dot{width:11px;height:11px;border-radius:50%;flex:none;margin-top:.24rem;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55),0 0 0 1px rgba(0,0,0,.18);}
       .shirt-dot.red{background:#d92c1f;}
       .shirt-dot.black{background:#23272b;}
       .shirt-dot.yellow{background:#e8a90c;}
       .shirt-dot.purple{background:#8e44ad;}
       .shirt-dot.member{background:#9db6c4;}
-      .rank-box .rank-note{margin-top:.45rem;color:var(--muted);font-size:.92em;}
+      .rank-card .rank-note{margin-top:.55rem;color:var(--muted);font-size:.92em;}
 
       /* Queue / stage panel (chế độ xếp hàng — làm theo ảnh mẫu ccTalk mục 05) */
       .queue-panel{display:none;border-bottom:1px solid var(--line);background:var(--panel-2);padding:.55rem .8rem .7rem;}
@@ -547,7 +552,7 @@
         .roomhead{flex-wrap:nowrap;}
         .room-title-row{min-width:0;}
         .room-title-row .room-title{flex:1 1 auto;min-width:0;}
-        .rank-box{font-size:.74rem;padding:.55rem .6rem .6rem;}
+        .rank-card{font-size:.84rem;}
         .chat-tools{gap:.4rem;padding:.4rem .55rem;}
         .mode-select{font-size:.8rem;padding:.28rem .55rem;}
         .mode-lock-hint{font-size:.72rem;}
@@ -705,10 +710,29 @@
       </div>
     </div>
 
+    <!-- Popup cấp bậc & quyền hạn — mở từ nút huy hiệu cảnh sát trên thanh tiêu đề -->
+    <div class="overlay hidden" id="rankModal">
+      <div class="login-card rank-card">
+        <button class="rank-close" id="rankClose" type="button" aria-label="Đóng">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg>
+        </button>
+        <div class="rank-title">CẤP BẬC &amp; QUYỀN HẠN TRONG PHÒNG</div>
+        <div class="rank-row"><span class="shirt-dot red"></span><span><b>Đỏ — QTV:</b> quyền cao nhất. Cấm chat / khóa mic được mọi cấp, cấp áo cho BĐH, tạo phòng mới, đổi chế độ trò chuyện và cài đặt phòng.</span></div>
+        <div class="rank-row"><span class="shirt-dot black"></span><span><b>Đen — BĐH:</b> điều hành phòng như QTV nhưng <b>không</b> cấm chat / khóa mic được áo đỏ. Cấp được áo vàng và áo tím.</span></div>
+        <div class="rank-row"><span class="shirt-dot yellow"></span><span><b>Vàng — BĐH:</b> điều hành phòng, <b>không</b> cấm được áo đỏ và áo đen. Cấp được áo tím.</span></div>
+        <div class="rank-row"><span class="shirt-dot purple"></span><span><b>Tím — BĐH:</b> điều hành phòng, <b>không</b> cấm được áo đỏ, đen và vàng. Không cấp áo cho người khác.</span></div>
+        <div class="rank-row"><span class="shirt-dot member"></span><span><b>Thành viên thường:</b> chat, lên mic theo chế độ của phòng, thả tim, chơi lô tô — không có quyền quản lý.</span></div>
+        <div class="rank-note">Áo vàng / tím do QTV hoặc áo đen cấp sẽ hiện thêm logo BĐH cạnh tên. Bấm vào tên từng người trong danh sách để xem các quyền áp dụng cho người đó.</div>
+      </div>
+    </div>
+
     <div class="app" id="app">
       <!-- Top blue bar -->
       <div class="topbar">
         <div class="spacer"></div>
+        <button class="top-ico rank-ico" id="rankBtn" type="button" aria-label="Cấp bậc và quyền hạn trong phòng" title="Cấp bậc &amp; quyền hạn trong phòng">
+          <svg width="21" height="21" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="goldShield" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset=".55" stop-color="#f5b81d"/><stop offset="1" stop-color="#c47f06"/></linearGradient></defs><path d="M12 1.8 20 4.6v6.2c0 5-3.3 9-8 11.4C7.3 19.8 4 15.8 4 10.8V4.6L12 1.8Z" fill="url(#goldShield)" stroke="#8a5a00" stroke-width="1.1"/><path d="M12 6.4l1.55 3.14 3.47.5-2.51 2.45.59 3.45L12 14.32l-3.1 1.62.59-3.45-2.51-2.45 3.47-.5L12 6.4Z" fill="#fff7dd" stroke="#8a5a00" stroke-width=".7" stroke-linejoin="round"/></svg>
+        </button>
         <div class="user-chip" id="userChip">
           <span class="uava" id="userAva">?</span>
           <span class="uname" id="userChipName">—</span>
@@ -770,15 +794,6 @@
             </button>
           </div>
           <div class="room-list" id="roomList"></div>
-          <div class="rank-box" id="rankBox">
-            <div class="rank-title">CẤP BẬC &amp; QUYỀN HẠN TRONG PHÒNG</div>
-            <div class="rank-row"><span class="shirt-dot red"></span><span><b>Đỏ — QTV:</b> quyền cao nhất. Cấm chat / khóa mic được mọi cấp, cấp áo cho BĐH, tạo phòng mới, đổi chế độ trò chuyện và cài đặt phòng.</span></div>
-            <div class="rank-row"><span class="shirt-dot black"></span><span><b>Đen — BĐH:</b> điều hành phòng như QTV nhưng <b>không</b> cấm chat / khóa mic được áo đỏ. Cấp được áo vàng và áo tím.</span></div>
-            <div class="rank-row"><span class="shirt-dot yellow"></span><span><b>Vàng — BĐH:</b> điều hành phòng, <b>không</b> cấm được áo đỏ và áo đen. Cấp được áo tím.</span></div>
-            <div class="rank-row"><span class="shirt-dot purple"></span><span><b>Tím — BĐH:</b> điều hành phòng, <b>không</b> cấm được áo đỏ, đen và vàng. Không cấp áo cho người khác.</span></div>
-            <div class="rank-row"><span class="shirt-dot member"></span><span><b>Thành viên thường:</b> chat, lên mic theo chế độ của phòng, thả tim, chơi lô tô — không có quyền quản lý.</span></div>
-            <div class="rank-note">Áo vàng / tím do QTV hoặc áo đen cấp sẽ hiện thêm logo BĐH cạnh tên. Bấm vào tên từng người trong danh sách để xem các quyền áp dụng cho người đó.</div>
-          </div>
           <div class="col-resizer" id="colResizer" role="separator" aria-orientation="vertical" aria-label="Kéo để mở rộng hoặc thu hẹp cột danh sách thành viên" title="Kéo để mở rộng / thu hẹp cột danh sách — tên dài sẽ hiện đầy đủ hơn"></div>
         </aside>
 
@@ -4162,6 +4177,10 @@
         toast(state.fav ? "Đã thêm phòng " + currentRoom().name + " vào mục yêu thích" : "Đã bỏ khỏi mục yêu thích");
       });
       $("notifyBtn").addEventListener("click", function(){ toast("Bạn có 99+ thông báo hệ thống (mô phỏng)"); });
+      /* Popup cấp bậc & quyền hạn: mở từ nút huy hiệu cảnh sát, đóng bằng nút X hoặc bấm ra ngoài popup */
+      $("rankBtn").addEventListener("click", function(){ $("rankModal").classList.remove("hidden"); });
+      $("rankClose").addEventListener("click", function(){ $("rankModal").classList.add("hidden"); });
+      $("rankModal").addEventListener("click", function(e){ if(e.target === this) this.classList.add("hidden"); });
       $("gameBtn").addEventListener("click", function(){ toggleLotoPanel(true); });
       $("leaveBtn").addEventListener("click", function(){
         stopAllTalk();

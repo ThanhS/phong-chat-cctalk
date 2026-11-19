@@ -1,0 +1,43 @@
+# Máy chủ voice cho phòng chat kiểu ccTalk của Thanh.
+# 2 service: LiveKit (SFU WebRTC) + token-server (cấp token theo phòng/cấp bậc).
+# Chạy:  cp .env.example .env  (sửa key/secret)  ->  docker compose up -d
+services:
+  livekit:
+    image: livekit/livekit-server:v1.13.10
+    container_name: cctalk-livekit
+    restart: unless-stopped
+    command: --config /etc/livekit.yaml
+    # Key/secret KHÔNG nằm trong config.yaml mà qua biến môi trường LIVEKIT_KEYS.
+    # Format: "API_KEY: API_SECRET" — phải trùng với .env của token-server.
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+    ports:
+      - "7880:7880"      # HTTP + WebSocket signalling (wss qua reverse proxy)
+      - "7881:7881"      # RTC qua TCP (fallback khi UDP bị chặn)
+      - "50000-60000:50000-60000/udp"  # RTC media (UDP)
+    volumes:
+      - ./livekit/config.yaml:/etc/livekit.yaml:ro
+
+  token-server:
+    build: ./token-server
+    container_name: cctalk-token-server
+    restart: unless-stopped
+    environment:
+      LIVEKIT_URL: ${LIVEKIT_URL:-ws://localhost:7880}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+      TOKEN_PORT: "3001"
+      TOKEN_TTL: ${TOKEN_TTL:-6h}
+      # Đăng nhập phía máy chủ (v2): secret ký session + mật khẩu gieo tài khoản.
+      # Đặt mật khẩu mạnh khi chạy online; file .env không bao giờ commit.
+      SESSION_SECRET: ${SESSION_SECRET}
+      SESSION_TTL: ${SESSION_TTL:-6h}
+      ALLOW_LEGACY_TOKEN: ${ALLOW_LEGACY_TOKEN:-0}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      BDH_PASSWORD: ${BDH_PASSWORD:-}
+      THANH_PASSWORD: ${THANH_PASSWORD:-}
+      TEST_PASSWORD: ${TEST_PASSWORD:-}
+      STAGE_SECRET: ${STAGE_SECRET:-}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+    ports:
+      - "3001:3001"

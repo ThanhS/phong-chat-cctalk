@@ -1,0 +1,1 @@
+{"dependencies":{"livekit-server-sdk":"^2.20.0"},"description":"Token server cho phòng chat ccTalk: cấp JWT LiveKit theo phòng + cấp bậc (QTV/BĐH/thành viên).","engines":{"node":">=20"},"main":"server.js","name":"cctalk-token-server","scripts":{"start":"node server.js"},"type":"module","version":"1.0.0"}

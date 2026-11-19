@@ -1,0 +1,41 @@
+# Chế độ LiveKit Cloud: chỉ chạy token-server + Caddy (SSL cho token subdomain).
+# LiveKit server do LiveKit Cloud lo — không cần chạy service livekit.
+# Chạy:  cp .env.example .env  (điền LIVEKIT_URL=wss://xxx.livekit.cloud + key/secret Cloud)
+#        docker compose -f docker-compose.cloud.yml up -d
+services:
+  token-server:
+    build: ./token-server
+    container_name: cctalk-token-server
+    restart: unless-stopped
+    environment:
+      LIVEKIT_URL: ${LIVEKIT_URL}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+      TOKEN_PORT: "3001"
+      TOKEN_TTL: ${TOKEN_TTL:-6h}
+      # Đăng nhập phía máy chủ (v2): secret ký session + mật khẩu gieo tài khoản.
+      SESSION_SECRET: ${SESSION_SECRET}
+      SESSION_TTL: ${SESSION_TTL:-6h}
+      ALLOW_LEGACY_TOKEN: ${ALLOW_LEGACY_TOKEN:-0}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      BDH_PASSWORD: ${BDH_PASSWORD:-}
+      THANH_PASSWORD: ${THANH_PASSWORD:-}
+      TEST_PASSWORD: ${TEST_PASSWORD:-}
+      STAGE_SECRET: ${STAGE_SECRET:-}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+    ports:
+      - "127.0.0.1:3001:3001"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: cctalk-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile.cloud:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+
+volumes:
+  caddy-data:

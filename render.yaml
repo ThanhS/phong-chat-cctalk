@@ -1,0 +1,47 @@
+# Render Blueprint — triển khai token-server cho phòng chat ccTalk lên Render miễn phí.
+# Cách dùng: mở https://render.com/deploy?repo=https://github.com/ThanhS/phong-chat-cctalk
+# rồi đăng nhập Render bằng GitHub, điền các biến môi trường được hỏi, bấm Deploy.
+# Render cấp địa chỉ HTTPS miễn phí dạng https://cctalk-token-server.onrender.com
+# Trang phòng chat (GitHub Pages) sẽ gọi vào địa chỉ này để đăng nhập + xin token voice.
+#
+# Lưu ý gói miễn phí: máy chủ ngủ sau 15 phút không ai dùng, lần gọi đầu tiên
+# sau đó mất ~30-60 giây để tỉnh lại (lần đăng nhập đầu sau khi nghỉ sẽ chậm).
+# Tài khoản demo được gieo lại từ biến môi trường mỗi lần máy chủ khởi động;
+# nick đăng ký qua /register sẽ mất khi máy chủ restart (không có ổ đĩa bền ở
+# gói miễn phí) — dùng để test là đủ.
+services:
+  - type: web
+    name: cctalk-token-server
+    env: node
+    region: singapore
+    plan: free
+    rootDir: token-server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      # 3 giá trị lấy trong dashboard LiveKit Cloud (giữ kín, không gửi qua chat):
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+      # Secret ký session đăng nhập — Render tự sinh, không cần điền:
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: SESSION_TTL
+        value: 6h
+      # Chế độ cũ (client tự khai rank) luôn tắt:
+      - key: ALLOW_LEGACY_TOKEN
+        value: "0"
+      # Mật khẩu gieo tài khoản demo ở lần khởi động đầu (đặt mật khẩu mạnh;
+      # THANH_PASSWORD có thể để trống nếu không dùng nick thanh):
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: BDH_PASSWORD
+        sync: false
+      - key: THANH_PASSWORD
+        sync: false
+      - key: TEST_PASSWORD
+        sync: false

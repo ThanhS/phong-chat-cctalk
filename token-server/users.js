@@ -49,6 +49,16 @@ export function validId(id) {
   return typeof id === 'string' && /^[a-z0-9_]{3,20}$/.test(id);
 }
 
+// Đổi cấp bậc của 1 tài khoản và lưu ngay vào data/users.json (dùng cho
+// cấp áo BĐH đồng bộ qua hub — v3.4). Trả về true nếu đổi được (id tồn
+// tại và rank hợp lệ), false nếu không.
+export function setUserRank(users, id, rank) {
+  if (!users[id] || !RANKS.has(rank)) return false;
+  users[id].rank = rank;
+  saveUsers(users);
+  return true;
+}
+
 // Gieo tài khoản demo từ biến môi trường — CHỈ chạy khi chưa có file users
 // (lần khởi động đầu tiên). Mật khẩu lấy từ biến môi trường, không có giá
 // trị mặc định nào ghi cứng trong code.

@@ -23,11 +23,15 @@
 // (chi tiết giao thức ở mục "Hub WebSocket" phía dưới). Tin nhắn và phòng
 // tự tạo chỉ giữ trong RAM; restart sẽ mất (Render gói miễn phí không có
 // ổ đĩa bền). Hàng đợi mic chưa đồng bộ qua hub này.
-// V3.1: bot 35/phòng luôn online + tự chat mỗi ~10s/phòng.
+// V3.1: bot 10/phòng luôn online + tự chat mỗi ~10s/phòng (giảm từ 35
+// xuống 10 theo yêu cầu ngày 19/11/2026 — phòng đỡ rối, vẫn đủ đông vui).
 // V3.2: Lô Tô đồng bộ qua hub — 1 vòng/phòng, chủ vòng kêu số, máy chủ
 // kiểm tra KINH và phát cho cả phòng (chi tiết ở mục "Lô Tô" phía dưới).
 // V3.3: chống spam/lạm dụng theo IP — giới hạn /login, /register, /token,
 // chat và số kết nối WS trên 1 IP; mỗi người tối đa 5 phòng tự tạo.
+// V3.4: cấp áo BĐH đồng bộ qua hub (set-rank, lưu kho tài khoản, phát
+// rank-changed + presence cho mọi máy), phát số người/phòng (room-counts)
+// cho mọi máy khi có người vào/ra/tạo/xóa phòng; bot 35 -> 10/phòng.
 
 import http from 'node:http';
 import crypto from 'node:crypto';
@@ -35,7 +39,7 @@ import { AccessToken } from 'livekit-server-sdk';
 import { WebSocketServer } from 'ws';
 import {
   loadUsers, saveUsers, usersFileExists, seedFromEnv,
-  hashPassword, verifyPassword, validId, RANKS, MANAGER_RANKS,
+  hashPassword, verifyPassword, validId, RANKS, MANAGER_RANKS, setUserRank,
 } from './users.js';
 
 const {
@@ -103,6 +107,14 @@ function verifySession(token) {
     const payload = JSON.parse(Buffer.from(p, 'base64url').toString('utf8'));
     if (!payload.sub || !payload.rank || !RANKS.has(payload.rank)) return null;
     if (payload.exp * 1000 < Date.now()) return null;
+    // Cấp bậc + tên lấy từ kho tài khoản (không lấy từ token) để đổi áo
+    // BĐH có hiệu lực ngay với lần đăng nhập/kết nối/xin token tiếp theo
+    // (v3.4) — token chỉ còn tác dụng chứng minh danh tính (sub).
+    const stored = users[payload.sub];
+    if (stored) {
+      payload.rank = stored.rank;
+      payload.name = stored.name;
+    }
     return payload;
   } catch { return null; }
 }
@@ -316,6 +328,9 @@ const roomsByCreator = new Map(); // userId -> count
 //     {type:'leave', room}              — rời phòng
 //     {type:'create-room', name}        — QTV/BĐH tạo phòng mới
 //     {type:'delete-room', room}        — QTV xóa phòng tự tạo (không xóa 4 phòng mặc định)
+//     {type:'set-rank', userId, rank}   — cấp áo BĐH đồng bộ (v3.4): QTV/đen/vàng
+//                                          cấp áo thấp hơn áo mình cho người dưới mình;
+//                                          rank 'member' = gỡ áo; không cấp được 'qtv'
 //     {type:'loto-create', room, kinh}  — QTV/BĐH mở vòng Lô Tô (kinh 2-6); 1 vòng/phòng
 //     {type:'loto-join', room, numbers} — chốt số vào vòng đang mở
 //     {type:'loto-start', room}         — chủ vòng bắt đầu kêu số
@@ -331,6 +346,10 @@ const roomsByCreator = new Map(); // userId -> count
 //     tin nhắn bot có thêm bot:true + gender; bot tự nói mỗi ~10s/phòng
 //     {type:'room-created', room, label, id}
 //     {type:'room-closed', room}         — phòng đang ở bị xóa, client tự chuyển về Đại Sảnh
+//     {type:'room-counts', counts:[{room, count}]} — số người online mỗi phòng
+//                                          (người thật + bot), phát cho mọi máy khi có
+//                                          người vào/ra/tạo/xóa phòng (v3.4)
+//     {type:'rank-changed', userId, name, rank} — vừa có người được cấp/gỡ áo (v3.4)
 //     {type:'loto-state', room, state}   — trạng thái vòng Lô Tô (null khi chưa có vòng)
 //     {type:'loto-called', room, number} — số vừa kêu (ai cũng nhận, kể cả máy chủ vòng)
 //     {type:'loto-kinh', room, winner}   — có người KINH, vòng kết thúc
@@ -371,12 +390,12 @@ function membersMapOf(roomName) {
   return roomMembers.get(roomName);
 }
 // ---- Bot cho đông vui ------------------------------------------------------
-// Mỗi phòng mặc định có sẵn 35 bot (tên + giới tính cố định theo seed nên
+// Mỗi phòng mặc định có sẵn 10 bot (tên + giới tính cố định theo seed nên
 // lần restart nào cũng giống nhau). Bot luôn "online" và tự chat mỗi ~10s
 // một phòng, để phòng lúc nào cũng đông vui dù chưa có người thật.
 // Bot có mặt trong presence và room-state như người thường, chỉ khác là
 // có thêm trường bot:true + gender để trang hiển thị tag BOT.
-const BOTS_PER_ROOM = 35;
+const BOTS_PER_ROOM = 10;
 const BOT_CHAT_INTERVAL_MS = 10_000;
 const BOT_MALE_NAMES = [
   'Ken_Ken', 'Sói Cô Đơn', 'Út Cưng', 'Đạt 09', 'Cọp Giấy', 'Bảo',
@@ -427,8 +446,10 @@ function shuffled(arr, rand) {
 }
 function buildBotRoster(roomName, seed) {
   const rand = mulberry32(seed);
-  const males = shuffled(BOT_MALE_NAMES, rand).slice(0, 18);
-  const females = shuffled(BOT_FEMALE_NAMES, rand).slice(0, 17);
+  const maleCount = Math.ceil(BOTS_PER_ROOM / 2);
+  const femaleCount = BOTS_PER_ROOM - maleCount;
+  const males = shuffled(BOT_MALE_NAMES, rand).slice(0, maleCount);
+  const females = shuffled(BOT_FEMALE_NAMES, rand).slice(0, femaleCount);
   return [
     ...males.map((name) => ({ name, gender: 'male' })),
     ...females.map((name) => ({ name, gender: 'female' })),
@@ -497,6 +518,22 @@ function allRooms() {
   return list;
 }
 
+// ---- Đồng bộ cấp áo + số người/phòng (v3.4) ------------------------------
+// Thứ bậc áo (số càng nhỏ càng cao): dùng cho quyền cấp áo — chỉ QTV,
+// BĐH đen, BĐH vàng được cấp áo; chỉ cấp cho người dưới mình và chỉ cấp
+// áo thấp hơn áo mình (QTV -> đen/vàng/tím/gỡ áo, đen -> vàng/tím/gỡ áo,
+// vàng -> tím/gỡ áo; tím không cấp được gì).
+const RANK_ORDER = { qtv: 0, 'bdh-den': 1, 'bdh-vang': 2, 'bdh-tim': 3, member: 4 };
+// Số người đang online mỗi phòng (người thật + bot) — phát cho MỌI máy
+// đang nối để cột phòng trái hiển thị đúng theo thời gian thực (trước đây
+// mỗi máy chỉ biết số người của phòng mình đang ở, các phòng khác hiện 0).
+function roomCounts() {
+  return allRooms().map((r) => ({ room: r.room, count: membersOf(r.room).length }));
+}
+function wsBroadcastRoomCounts() {
+  wsBroadcastAll({ type: 'room-counts', counts: roomCounts() });
+}
+
 function wsSend(ws, obj) {
   if (ws.readyState === 1) ws.send(JSON.stringify(obj));
 }
@@ -527,6 +564,7 @@ function wsJoinRoom(ws, roomName) {
     loto: lotoPublic(lotoStateOf(roomName)),
   });
   wsBroadcastPresence(roomName);
+  wsBroadcastRoomCounts();
 }
 function wsLeaveRoom(ws) {
   if (!ws.room || !ws.user) return;
@@ -539,6 +577,7 @@ function wsLeaveRoom(ws) {
     if (e.conns <= 0) m.delete(ws.user.sub);
   }
   wsBroadcastPresence(roomName);
+  wsBroadcastRoomCounts();
 }
 
 const wss = new WebSocketServer({ noServer: true });
@@ -573,6 +612,7 @@ wss.on('connection', (ws) => {
         clearTimeout(authTimer);
         wsSend(ws, { type: 'auth-ok', user: { id: session.sub, name: session.name, rank: session.rank } });
         wsSend(ws, { type: 'rooms', rooms: allRooms() });
+        wsSend(ws, { type: 'room-counts', counts: roomCounts() });
       }
       return;
     }
@@ -620,6 +660,7 @@ wss.on('connection', (ws) => {
         ROOMS[roomName] = roomName;
         ROOM_LABELS[roomName] = label;
         wsBroadcastAll({ type: 'rooms', rooms: allRooms() });
+        wsBroadcastRoomCounts();
         wsSend(ws, { type: 'room-created', room: roomName, label, id });
         break;
       }
@@ -638,7 +679,45 @@ wss.on('connection', (ws) => {
         roomMembers.delete(roomName);
         lotoByRoom.delete(roomName);
         wsBroadcastAll({ type: 'rooms', rooms: allRooms() });
+        wsBroadcastRoomCounts();
         wsBroadcast(roomName, { type: 'room-closed', room: roomName });
+        break;
+      }
+      case 'set-rank': {
+        // Cấp áo BĐH đồng bộ (v3.4): đổi rank trong kho tài khoản (lưu
+        // users.json) rồi phát cho mọi máy — người được cấp áo giữ áo khi
+        // đổi phòng vì rank lấy từ kho, không còn chỉ đổi ở máy người cấp.
+        const targetId = String(msg.userId ?? '').trim().toLowerCase();
+        const newRank = String(msg.rank ?? '').trim();
+        if (!targetId || !RANKS.has(newRank) || newRank === 'qtv') {
+          return wsSend(ws, { type: 'error', code: 'bad-rank', message: 'Cấp bậc không hợp lệ.' });
+        }
+        if (targetId === ws.user.sub) {
+          return wsSend(ws, { type: 'error', code: 'forbidden', message: 'Không tự đổi cấp bậc của mình.' });
+        }
+        const senderOrder = RANK_ORDER[ws.user.rank];
+        const target = users[targetId];
+        if (!target) return wsSend(ws, { type: 'error', code: 'bad-user', message: 'Không tìm thấy người này.' });
+        const targetOrder = RANK_ORDER[target.rank];
+        if (senderOrder > 2) return wsSend(ws, { type: 'error', code: 'forbidden', message: 'Cấp bậc của bạn không cấp được áo.' });
+        if (targetOrder <= senderOrder) return wsSend(ws, { type: 'error', code: 'forbidden', message: 'Chỉ cấp áo cho người dưới cấp bậc của bạn.' });
+        if (RANK_ORDER[newRank] <= senderOrder) return wsSend(ws, { type: 'error', code: 'forbidden', message: 'Chỉ cấp áo thấp hơn áo của bạn.' });
+        if (!setUserRank(users, targetId, newRank)) return wsSend(ws, { type: 'error', code: 'bad-user', message: 'Không đổi được cấp bậc.' });
+        // Cập nhật rank cho các kết nối đang mở của người này (kể cả máy
+        // khác) và rank trong presence của các phòng họ đang ở.
+        const roomsOfTarget = new Set();
+        for (const client of wss.clients) {
+          if (client.user && client.user.sub === targetId) {
+            client.user.rank = newRank;
+            if (client.room) roomsOfTarget.add(client.room);
+          }
+        }
+        for (const [roomName, m] of roomMembers) {
+          const e = m.get(targetId);
+          if (e) e.rank = newRank;
+        }
+        wsBroadcastAll({ type: 'rank-changed', userId: targetId, name: target.name, rank: newRank });
+        for (const r of roomsOfTarget) wsBroadcastPresence(r);
         break;
       }
       case 'loto-create': {

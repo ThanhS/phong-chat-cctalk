@@ -98,7 +98,12 @@ async function main() {
       check('vào phòng 208 nhận room-state', !!stateA && stateA.room === 'giao-luu-ket-ban');
       const presB = await waitFor(b.msgs, (m) => m.type === 'presence' && m.members.filter((x) => !x.bot).length === 2);
       check('presence thấy đủ 2 người thật', !!presB, JSON.stringify(b.msgs.filter((m) => m.type === 'presence').slice(-1)));
-      check('presence có 35 bot cho đông vui', !!presB && presB.members.filter((x) => x.bot).length === 35, `bots=${presB ? presB.members.filter((x) => x.bot).length : '?'}`);
+      check('presence có 10 bot cho đông vui', !!presB && presB.members.filter((x) => x.bot).length === 10, `bots=${presB ? presB.members.filter((x) => x.bot).length : '?'}`);
+
+      // 2b. Số người/phòng phát cho mọi máy: 208 có 12 (10 bot + 2 người), các phòng khác 10.
+      const countsB = await waitFor(b.msgs, (m) => m.type === 'room-counts' && m.counts.find((x) => x.room === 'giao-luu-ket-ban')?.count === 12);
+      check('room-counts: phòng 208 = 12 người', !!countsB, JSON.stringify(b.msgs.filter((m) => m.type === 'room-counts').slice(-1)));
+      check('room-counts: phòng khác = 10 bot', !!countsB && countsB.counts.find((x) => x.room === 'dai-sanh')?.count === 10 && countsB.counts.find((x) => x.room === 'giao-luu')?.count === 10 && countsB.counts.find((x) => x.room === 'ho-tro')?.count === 10, JSON.stringify(countsB?.counts));
 
       // 3. Admin nhắn -> test001 nhận.
       a.ws.send(JSON.stringify({ type: 'message', room: '208', text: 'xin chào từ admin' }));
@@ -192,10 +197,16 @@ async function main() {
       const stateNew = await waitFor(a.msgs, (m) => m.type === 'room-state' && m.room === 'phong-104');
       check('vào phòng tự tạo được', !!stateNew);
 
+      // 6b. Số người/phòng cập nhật khi đổi phòng: 104 có 1 người (a), 208 còn 12 (b, c + 10 bot; d đã rời sau vòng Lô Tô).
+      const countsC = await waitFor(c.msgs, (m) => m.type === 'room-counts' && m.counts.find((x) => x.room === 'phong-104')?.count === 1 && m.counts.find((x) => x.room === 'giao-luu-ket-ban')?.count === 12);
+      check('room-counts: phòng tự tạo = 1, phòng 208 còn 12', !!countsC, JSON.stringify(c.msgs.filter((m) => m.type === 'room-counts').slice(-1)));
+
       // 7. Rời phòng -> presence cập nhật (208 còn lại test002).
       b.ws.close();
       const presC = await waitFor(c.msgs, (m) => m.type === 'presence' && m.members.filter((x) => !x.bot).length === 1 && m.members.find((x) => !x.bot)?.id === 'test002', 5000);
       check('rời phòng cập nhật presence', !!presC, JSON.stringify(c.msgs.filter((m) => m.type === 'presence').slice(-1)));
+      const countsC2 = await waitFor(c.msgs, (m) => m.type === 'room-counts' && m.counts.find((x) => x.room === 'giao-luu-ket-ban')?.count === 11);
+      check('room-counts cập nhật khi có người rời phòng (208 còn 11)', !!countsC2);
 
       // 8. /token cho phòng tự tạo vẫn chạy (voice).
       const tok = await fetch(`${BASE}/token`, {
@@ -204,6 +215,44 @@ async function main() {
         body: JSON.stringify({ room: '104' }),
       });
       check('/token cho phòng tự tạo', tok.ok, `status=${tok.status}`);
+
+      // 8b. Cấp áo BĐH đồng bộ (v3.4): admin cấp áo vàng cho test001 -> mọi máy nhận rank-changed.
+      a.ws.send(JSON.stringify({ type: 'set-rank', userId: 'test001', rank: 'bdh-vang' }));
+      const rankA = await waitFor(a.msgs, (m) => m.type === 'rank-changed' && m.userId === 'test001' && m.rank === 'bdh-vang');
+      check('admin cấp áo vàng cho test001 -> phát rank-changed', !!rankA);
+      const rankC = await waitFor(c.msgs, (m) => m.type === 'rank-changed' && m.userId === 'test001' && m.rank === 'bdh-vang');
+      check('máy khác cũng nhận rank-changed', !!rankC);
+      // Người được cấp áo giữ áo khi đăng nhập lại + đổi phòng (rank lấy từ kho tài khoản).
+      const bSession2 = await login('test001', 'testpass123');
+      const b2 = await connect();
+      b2.ws.send(JSON.stringify({ type: 'auth', token: bSession2 }));
+      const authB2 = await waitFor(b2.msgs, (m) => m.type === 'auth-ok');
+      check('đăng nhập lại vẫn giữ áo vàng', !!authB2 && authB2.user.rank === 'bdh-vang', JSON.stringify(authB2?.user));
+      b2.ws.send(JSON.stringify({ type: 'join', room: '102' }));
+      const stateB2 = await waitFor(b2.msgs, (m) => m.type === 'room-state' && m.room === 'giao-luu');
+      check('đổi phòng vẫn giữ áo vàng', !!stateB2 && stateB2.members.find((x) => x.id === 'test001')?.rank === 'bdh-vang');
+      // Thành viên thường không cấp được áo; BĐH đen không cấp được áo đen (ngang cấp).
+      c.ws.send(JSON.stringify({ type: 'set-rank', userId: 'test001', rank: 'bdh-tim' }));
+      const deniedMember = await waitFor(c.msgs, (m) => m.type === 'error' && m.code === 'forbidden');
+      check('thành viên thường cấp áo -> bị từ chối', !!deniedMember);
+      const d2 = await connect();
+      d2.ws.send(JSON.stringify({ type: 'auth', token: bdhSession }));
+      await waitFor(d2.msgs, (m) => m.type === 'auth-ok');
+      d2.ws.send(JSON.stringify({ type: 'set-rank', userId: 'test002', rank: 'bdh-den' }));
+      const deniedBlack = await waitFor(d2.msgs, (m) => m.type === 'error' && m.code === 'forbidden');
+      check('BĐH đen cấp áo đen (ngang cấp) -> bị từ chối', !!deniedBlack);
+      // BĐH đen cấp được áo vàng cho thành viên; admin gỡ áo về lại thành viên (dọn dẹp).
+      d2.ws.send(JSON.stringify({ type: 'set-rank', userId: 'test002', rank: 'bdh-vang' }));
+      const rankD2 = await waitFor(d2.msgs, (m) => m.type === 'rank-changed' && m.userId === 'test002' && m.rank === 'bdh-vang');
+      check('BĐH đen cấp áo vàng cho thành viên được', !!rankD2);
+      a.ws.send(JSON.stringify({ type: 'set-rank', userId: 'test002', rank: 'member' }));
+      const demoteC = await waitFor(c.msgs, (m) => m.type === 'rank-changed' && m.userId === 'test002' && m.rank === 'member');
+      check('admin gỡ áo test002 về thành viên', !!demoteC);
+      a.ws.send(JSON.stringify({ type: 'set-rank', userId: 'test001', rank: 'member' }));
+      const demoteB = await waitFor(a.msgs, (m) => m.type === 'rank-changed' && m.userId === 'test001' && m.rank === 'member');
+      check('admin gỡ áo test001 về thành viên', !!demoteB);
+      b2.ws.close();
+      d2.ws.close();
 
       // 9. Giới hạn kết nối WS theo IP: đang có 2 kết nối (a, c) -> mở thêm 8 được, cái thứ 9 bị từ chối.
       const extra = [];

@@ -38,3 +38,14 @@ Nhạc Lô Tô nằm trong thư mục `assets/loto/` (01–90 + intro).
 - Phòng tự tạo: mỗi người tối đa 5 phòng, tối đa 50 phòng toàn máy chủ.
 - Các giới hạn này chống lạm dụng (spam, dò mật khẩu, tạo nick rác),
   không chống được DDoS lớn — cần Cloudflare (cần tên miền riêng).
+
+### v3.4 — Cấp áo BĐH đồng bộ + số người/phòng theo thời gian thực + 10 bot/phòng
+
+- Cấp áo BĐH đồng bộ qua hub (`set-rank`): QTV/đen/vàng cấp áo thấp hơn
+  áo mình cho người dưới mình (tím không cấp được gì); rank lưu vào kho
+  tài khoản nên người được cấp áo giữ áo khi đổi phòng hay đăng nhập lại,
+  mọi máy đều nhận `rank-changed` + presence mới ngay.
+- Số người online mỗi phòng (`room-counts`, gồm người thật + bot) phát
+  cho mọi máy khi có người vào/ra/tạo/xóa phòng, nên cột phòng trái hiển
+  thị đúng theo thời gian thực thay vì chỉ biết phòng mình đang ở.
+- Bot máy chủ giảm từ 35 xuống 10/phòng.

@@ -19,19 +19,21 @@ function check(name, ok, extra = '') {
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function login(id, password) {
-  const r = await fetch(`${BASE}/login`, {
+const lastLogin = {};
+async function login(id, password, base = BASE) {
+  const r = await fetch(`${base}/login`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, password }),
   });
   const j = await r.json();
   if (!r.ok) throw new Error(`login ${id} failed: ${JSON.stringify(j)}`);
+  lastLogin[id] = j;
   return j.session;
 }
 
-function connect() {
+function connect(opts = {}, url = WS_URL) {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(WS_URL);
+    const ws = new WebSocket(url, opts);
     const msgs = [];
     ws.on('message', (d) => { try { msgs.push(JSON.parse(String(d))); } catch { /* bỏ */ } });
     ws.on('open', () => { ws.on('error', () => {}); resolve({ ws, msgs }); });
@@ -59,7 +61,7 @@ async function main() {
     ADMIN_PASSWORD: 'adminpass123', BDH_PASSWORD: 'bdhpass123',
     TEST_PASSWORD: 'testpass123', PORT: String(PORT),
   };
-  const server = spawn('node', ['server.js'], { cwd: DIR, env, stdio: 'pipe' });
+  const server = spawn('node', ['server.js'], { cwd: DIR, env: { ...env, WS_PING_MS: '1000' }, stdio: 'pipe' });
   server.stdout.on('data', (d) => process.stdout.write('[server] ' + d));
   server.stderr.on('data', (d) => process.stdout.write('[server:err] ' + d));
 
@@ -272,12 +274,19 @@ async function main() {
 
       // 10. Giới hạn đăng ký theo IP: 5 tài khoản liên tiếp OK, cái thứ 6 bị chặn 429.
       let regOk = 0;
+      const regCodes = [];
+      let regGender = null;
       for (let i = 1; i <= 5; i++) {
         const r = await fetch(`${BASE}/register`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: `reg00${i}`, password: 'testpass123' }),
+          body: JSON.stringify({ id: `reg00${i}`, password: 'testpass123', gender: i === 1 ? 'female' : undefined }),
         });
-        if (r.status === 201) regOk += 1;
+        if (r.status === 201) {
+          regOk += 1;
+          const j = await r.json();
+          regCodes.push(j.user?.code);
+          if (i === 1) regGender = j.user?.gender;
+        }
       }
       check('đăng ký 5 tài khoản liên tiếp OK', regOk === 5, `ok=${regOk}`);
       const r6 = await fetch(`${BASE}/register`, {
@@ -285,6 +294,127 @@ async function main() {
         body: JSON.stringify({ id: 'reg006', password: 'testpass123' }),
       });
       check('đăng ký thứ 6 bị chặn 429', r6.status === 429, `status=${r6.status}`);
+
+
+      // ===== v3.5 =====
+      // 11. Mã số 9 chữ số, duy nhất.
+      const codeRe = /^[1-9][0-9]{8}$/;
+      const adminCode = lastLogin.admin?.user?.code;
+      check('v3.5 /login trả profile có mã số 9 chữ số', codeRe.test(adminCode || ''), JSON.stringify(lastLogin.admin?.user));
+      check('v3.5 /register cấp mã số 9 chữ số cho tài khoản mới', regCodes.length === 5 && regCodes.every((x) => codeRe.test(x || '')), JSON.stringify(regCodes));
+      check('v3.5 /register lưu giới tính', regGender === 'female', String(regGender));
+      c.ws.send(JSON.stringify({ type: 'join', room: '208' }));
+      const st208 = await waitFor(c.msgs, (m) => m.type === 'room-state' && m.room === 'giao-luu-ket-ban' && m.members.some((x) => x.id === 'test002' && x.code));
+      const botCodes = st208 ? st208.members.filter((x) => x.bot).map((x) => x.code) : [];
+      const allCodes = [adminCode, lastLogin.test001?.user?.code, lastLogin.test002?.user?.code, lastLogin.bdh?.user?.code, ...regCodes, ...botCodes];
+      check('v3.5 mã số không trùng (người thật + bot)', allCodes.every((x) => codeRe.test(x || '')) && new Set(allCodes).size === allCodes.length, JSON.stringify(allCodes));
+      // 12. Profile trong presence/room-state + /me + auth-ok.
+      const me2 = st208?.members.find((x) => x.id === 'test002');
+      check('v3.5 room-state members có profile (code/points/daily/level)', !!me2 && codeRe.test(me2.code) && me2.points === 0 && me2.daily === 0 && me2.level === 1 && me2.title === 'Thành viên', JSON.stringify(me2));
+      const aBot = st208?.members.find((x) => x.bot);
+      check('v3.5 bot có code/points/daily/level giả lập', !!aBot && codeRe.test(aBot.code) && Number.isInteger(aBot.points) && Number.isInteger(aBot.daily) && aBot.level === Math.min(100, 1 + Math.floor(aBot.points / 40)), JSON.stringify(aBot));
+      const authA = a.msgs.find((m) => m.type === 'auth-ok');
+      check('v3.5 auth-ok.user là profile', !!authA && authA.user.code === adminCode && authA.user.title === 'Quản trị viên phòng chính' && 'points' in authA.user, JSON.stringify(authA?.user));
+      const meR = await fetch(`${BASE}/me`, { headers: { Authorization: `Bearer ${cSession}` } });
+      const meJ = await meR.json();
+      check('v3.5 /me có user profile', meJ.user?.code === lastLogin.test002?.user?.code, JSON.stringify(meJ));
+
+      // 13. Vote: a (admin) vào 208, c (test002) thả tim cho admin -> +1.
+      a.ws.send(JSON.stringify({ type: 'join', room: '208' }));
+      await waitFor(a.msgs, (m) => m.type === 'room-state' && m.room === 'giao-luu-ket-ban');
+      c.ws.send(JSON.stringify({ type: 'vote', room: '208', userId: 'admin' }));
+      const v1 = await waitFor(c.msgs, (m) => m.type === 'points' && m.userId === 'admin' && m.points === 1);
+      check('v3.5 vote +1 điểm (cả phòng nhận points)', !!v1 && v1.daily === 1, JSON.stringify(v1));
+      const v1a = await waitFor(a.msgs, (m) => m.type === 'points' && m.userId === 'admin' && m.points === 1);
+      check('v3.5 người được vote cũng nhận points', !!v1a);
+      c.ws.send(JSON.stringify({ type: 'vote', room: '208', userId: 'admin' }));
+      c.ws.send(JSON.stringify({ type: 'vote', room: '208', userId: 'test002' }));
+      c.ws.send(JSON.stringify({ type: 'vote', room: '208', userId: st208?.members.find((x) => x.bot)?.id }));
+      const v2 = await waitFor(c.msgs, (m) => m.type === 'points' && m.points === 2, 1500);
+      const errV = c.msgs.find((m) => m.type === 'error' && /vote/.test(m.message || ''));
+      check('v3.5 vote trong 5s cooldown / tự vote / vote bot -> bỏ qua im lặng', !v2 && !errV && !c.msgs.some((m) => m.type === 'points' && m.userId === 'test002'));
+      await sleep(5200);
+      c.ws.send(JSON.stringify({ type: 'vote', room: '208', userId: 'admin' }));
+      const v3 = await waitFor(c.msgs, (m) => m.type === 'points' && m.userId === 'admin' && m.points === 2);
+      check('v3.5 hết cooldown 5s vote lại được +1', !!v3);
+
+      // 14. Thưởng điểm (award).
+      a.ws.send(JSON.stringify({ type: 'award', userId: 'test002', amount: 50 }));
+      const aw = await waitFor(c.msgs, (m) => m.type === 'awarded' && m.toId === 'test002' && m.amount === 50);
+      check('v3.5 QTV thưởng 50 điểm -> phòng nhận awarded', !!aw && aw.fromName === 'Quản Trị Viên' && aw.room === 'giao-luu-ket-ban', JSON.stringify(aw));
+      const awP = await waitFor(c.msgs, (m) => m.type === 'points' && m.userId === 'test002' && m.points === 50 && m.level === 2);
+      check('v3.5 điểm người được thưởng = 50, cấp bậc 2', !!awP, JSON.stringify(c.msgs.filter((m) => m.type === 'points').slice(-1)));
+      a.ws.send(JSON.stringify({ type: 'award', userId: 'test002', amount: 101 }));
+      check('v3.5 QTV thưởng 101 -> bad-amount', !!(await waitFor(a.msgs, (m) => m.type === 'error' && m.code === 'bad-amount')));
+      a.ws.send(JSON.stringify({ type: 'award', userId: 'admin', amount: 10 }));
+      check('v3.5 tự thưởng mình -> forbidden', !!(await waitFor(a.msgs, (m) => m.type === 'error' && m.code === 'forbidden')));
+      a.ws.send(JSON.stringify({ type: 'award', userId: 'khongcoai', amount: 10 }));
+      check('v3.5 thưởng người không tồn tại -> bad-user', !!(await waitFor(a.msgs, (m) => m.type === 'error' && m.code === 'bad-user')));
+      const cErrBefore = c.msgs.filter((m) => m.type === 'error' && m.code === 'forbidden').length;
+      c.ws.send(JSON.stringify({ type: 'award', userId: 'admin', amount: 5 }));
+      check('v3.5 thành viên thường thưởng điểm -> forbidden', !!(await waitFor(c.msgs, (m) => m.type === 'error' && m.code === 'forbidden' && /thưởng/.test(m.message))) && c.msgs.filter((m) => m.type === 'error' && m.code === 'forbidden').length > cErrBefore);
+      for (let i = 0; i < 9; i++) a.ws.send(JSON.stringify({ type: 'award', userId: 'test002', amount: 100 }));
+      const aw950 = await waitFor(c.msgs, (m) => m.type === 'points' && m.userId === 'test002' && m.points === 950);
+      check('v3.5 QTV thưởng tổng 950/ngày được', !!aw950);
+      a.ws.send(JSON.stringify({ type: 'award', userId: 'test002', amount: 100 }));
+      check('v3.5 QTV vượt 1000/ngày -> award-limit', !!(await waitFor(a.msgs, (m) => m.type === 'error' && m.code === 'award-limit')));
+      const d3 = await connect();
+      d3.ws.send(JSON.stringify({ type: 'auth', token: bdhSession }));
+      await waitFor(d3.msgs, (m) => m.type === 'auth-ok');
+      d3.ws.send(JSON.stringify({ type: 'award', userId: 'admin', amount: 10 }));
+      check('v3.5 BĐH đen thưởng QTV (trên cấp) -> forbidden', !!(await waitFor(d3.msgs, (m) => m.type === 'error' && m.code === 'forbidden')));
+      d3.ws.send(JSON.stringify({ type: 'award', userId: 'test002', amount: 51 }));
+      check('v3.5 BĐH đen thưởng 51 -> bad-amount', !!(await waitFor(d3.msgs, (m) => m.type === 'error' && m.code === 'bad-amount')));
+      for (let i = 0; i < 6; i++) d3.ws.send(JSON.stringify({ type: 'award', userId: 'test003', amount: 50 }));
+      await waitFor(d3.msgs, () => d3.msgs.filter((m) => m.type === 'awarded' && m.toId === 'test003').length === 6);
+      check('v3.5 BĐH đen thưởng tổng 300/ngày được (người nhận không ở phòng nào -> người thưởng vẫn nhận xác nhận)', d3.msgs.filter((m) => m.type === 'awarded' && m.toId === 'test003').length === 6, `awarded=${d3.msgs.filter((m) => m.type === 'awarded').length}`);
+      d3.ws.send(JSON.stringify({ type: 'award', userId: 'test003', amount: 1 }));
+      check('v3.5 BĐH đen vượt 300/ngày -> award-limit', !!(await waitFor(d3.msgs, (m) => m.type === 'error' && m.code === 'award-limit')));
+      d3.ws.close();
+
+      // 15. Style chữ chat.
+      await sleep(900);
+      a.ws.send(JSON.stringify({ type: 'message', room: '208', text: 'chữ đỏ cỡ 18', style: { color: '#DC2626', size: 18 } }));
+      const sty = await waitFor(c.msgs, (m) => m.type === 'message' && m.msg?.text === 'chữ đỏ cỡ 18');
+      check('v3.5 style hợp lệ được giữ + broadcast', !!sty && sty.msg.style?.color === '#dc2626' && sty.msg.style?.size === 18, JSON.stringify(sty?.msg));
+      await sleep(900);
+      a.ws.send(JSON.stringify({ type: 'message', room: '208', text: 'style sai', style: { color: 'red', size: 99 } }));
+      const sty2 = await waitFor(c.msgs, (m) => m.type === 'message' && m.msg?.text === 'style sai');
+      check('v3.5 style sai -> bỏ style, tin vẫn gửi', !!sty2 && !sty2.msg.style, JSON.stringify(sty2?.msg));
+      const hist = await connect();
+      hist.ws.send(JSON.stringify({ type: 'auth', token: cSession }));
+      await waitFor(hist.msgs, (m) => m.type === 'auth-ok');
+      hist.ws.send(JSON.stringify({ type: 'join', room: '208' }));
+      const hst = await waitFor(hist.msgs, (m) => m.type === 'room-state');
+      check('v3.5 style lưu trong lịch sử chat', !!hst && hst.messages.find((m) => m.text === 'chữ đỏ cỡ 18')?.style?.size === 18);
+      hist.ws.close();
+
+      // 16. Socket chết (không trả pong) + đóng đột ngột -> room-counts về đúng.
+      await sleep(500);
+      const base208 = () => { const l = c.msgs.filter((m) => m.type === 'room-counts').slice(-1)[0]; return l?.counts.find((x) => x.room === 'giao-luu-ket-ban')?.count; };
+      const before = base208();
+      const s3 = await login('test003', 'testpass123');
+      const dead = await connect({ autoPong: false });
+      dead.ws.send(JSON.stringify({ type: 'auth', token: s3 }));
+      await waitFor(dead.msgs, (m) => m.type === 'auth-ok');
+      dead.ws.send(JSON.stringify({ type: 'join', room: '208' }));
+      const up = await waitFor(c.msgs, (m) => m.type === 'room-counts' && m.counts.find((x) => x.room === 'giao-luu-ket-ban')?.count === before + 1);
+      check('v3.5 socket mới vào 208 -> room-counts +1', !!up, `before=${before}`);
+      const mark = c.msgs.length;
+      const down = await (async () => { const t0 = Date.now(); while (Date.now() - t0 < 6000) { const f = c.msgs.slice(mark).find((m) => m.type === 'room-counts' && m.counts.find((x) => x.room === 'giao-luu-ket-ban')?.count === before); if (f) return f; await sleep(50); } return null; })();
+      check('v3.5 socket không trả pong bị dọn -> room-counts về đúng', !!down);
+      const abrupt = await connect();
+      abrupt.ws.send(JSON.stringify({ type: 'auth', token: s3 }));
+      await waitFor(abrupt.msgs, (m) => m.type === 'auth-ok');
+      abrupt.ws.send(JSON.stringify({ type: 'join', room: '208' }));
+      await waitFor(c.msgs.slice(0), () => true);
+      const mark2 = c.msgs.length;
+      await waitFor(abrupt.msgs, (m) => m.type === 'room-state');
+      abrupt.ws.terminate();
+      const down2 = await (async () => { const t0 = Date.now(); while (Date.now() - t0 < 6000) { const f = c.msgs.slice(mark2).find((m) => m.type === 'room-counts' && m.counts.find((x) => x.room === 'giao-luu-ket-ban')?.count === before); if (f) return f; await sleep(50); } return null; })();
+      check('v3.5 đóng kết nối đột ngột -> room-counts về đúng', !!down2);
+      const h = await (await fetch(`${BASE}/health`)).json();
+      check('v3.5 /health luôn có maintenance:false', h.maintenance === false, JSON.stringify(h));
 
       a.ws.close();
       c.ws.close();
@@ -294,6 +424,76 @@ async function main() {
     await sleep(500);
     fs.rmSync(DATA_DIR, { recursive: true, force: true });
   }
+
+  // ===== v3.5: cộng điểm online (giờ rút ngắn 1.5s) — server riêng cổng 3103 =====
+  {
+    const P2 = 3103, B2 = `http://localhost:${P2}`, W2 = `ws://localhost:${P2}/ws`;
+    fs.rmSync(DATA_DIR, { recursive: true, force: true });
+    const srv = spawn('node', ['server.js'], { cwd: DIR, env: { ...env, PORT: String(P2), ONLINE_POINT_MS: '1500', BDH_PASSWORD: 'bdhpass123' }, stdio: 'pipe' });
+    srv.stderr.on('data', (d) => process.stdout.write('[server2:err] ' + d));
+    try {
+      let ok2 = false;
+      for (let i = 0; i < 20; i++) { try { if ((await fetch(`${B2}/health`)).ok) { ok2 = true; break; } } catch { /* chưa lên */ } await sleep(500); }
+      check('v3.5 server điểm online khởi động', ok2);
+      const sA = await login('admin', 'adminpass123', B2);
+      const sB = await login('bdh', 'bdhpass123', B2);
+      const sT = await login('test001', 'testpass123', B2);
+      const cl = [];
+      for (const tok of [sA, sB, sT, sT]) {
+        const x = await connect({}, W2);
+        x.ws.send(JSON.stringify({ type: 'auth', token: tok }));
+        await waitFor(x.msgs, (m) => m.type === 'auth-ok');
+        cl.push(x);
+      }
+      const pA = await waitFor(cl[0].msgs, (m) => m.type === 'points' && m.userId === 'admin', 6000);
+      const pB = await waitFor(cl[1].msgs, (m) => m.type === 'points' && m.userId === 'bdh', 6000);
+      const pT = await waitFor(cl[2].msgs, (m) => m.type === 'points' && m.userId === 'test001', 6000);
+      check('v3.5 online đủ 1 "giờ" -> QTV +15', pA?.points === 15 && pA?.daily === 15, JSON.stringify(pA));
+      check('v3.5 online đủ 1 "giờ" -> BĐH đen +12', pB?.points === 12, JSON.stringify(pB));
+      check('v3.5 online đủ 1 "giờ" -> thành viên +10 (2 máy chỉ tính 1)', pT?.points === 10, JSON.stringify(pT));
+      for (const x of cl) x.ws.close();
+      await sleep(300);
+    } finally {
+      srv.kill('SIGTERM');
+      await sleep(800);
+    }
+    let saved = null;
+    try { saved = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'users.json'), 'utf8')); } catch { /* bỏ */ }
+    check('v3.5 điểm online được lưu vào users.json khi tắt máy chủ', !!saved && saved.test001?.points >= 10 && saved.admin?.points >= 15, JSON.stringify({ t: saved?.test001?.points, a: saved?.admin?.points }));
+    fs.rmSync(DATA_DIR, { recursive: true, force: true });
+  }
+
+  // ===== v3.5: chế độ bảo trì — server riêng cổng 3104 =====
+  {
+    const P3 = 3104, B3 = `http://localhost:${P3}`, W3 = `ws://localhost:${P3}/ws`;
+    const srv = spawn('node', ['server.js'], { cwd: DIR, env: { ...env, PORT: String(P3), MAINTENANCE: '1', MAINTENANCE_MESSAGE: 'Đang nâng cấp v3.5' }, stdio: 'pipe' });
+    srv.stderr.on('data', (d) => process.stdout.write('[server3:err] ' + d));
+    try {
+      let h = null;
+      for (let i = 0; i < 20; i++) { try { const r = await fetch(`${B3}/health`); if (r.ok) { h = await r.json(); break; } } catch { /* chưa lên */ } await sleep(500); }
+      check('v3.5 bảo trì: /health 200 maintenance:true + message', h?.ok === true && h?.maintenance === true && h?.message === 'Đang nâng cấp v3.5', JSON.stringify(h));
+      const post = (p, body) => fetch(`${B3}${p}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const rl = await post('/login', { id: 'admin', password: 'adminpass123' });
+      const jl = await rl.json();
+      check('v3.5 bảo trì: /login 503 error:maintenance', rl.status === 503 && jl.error === 'maintenance' && jl.message === 'Đang nâng cấp v3.5', `${rl.status} ${JSON.stringify(jl)}`);
+      const rr = await post('/register', { id: 'newbie', password: 'testpass123' });
+      check('v3.5 bảo trì: /register 503', rr.status === 503 && (await rr.json()).error === 'maintenance');
+      const rt = await post('/token', { room: '101' });
+      check('v3.5 bảo trì: /token 503', rt.status === 503);
+      const code = await new Promise((resolve) => {
+        const ws = new WebSocket(W3);
+        ws.on('error', () => {});
+        ws.on('close', (c) => resolve(c));
+        setTimeout(() => resolve(null), 5000);
+      });
+      check('v3.5 bảo trì: /ws đóng mã 4503', code === 4503, `code=${code}`);
+    } finally {
+      srv.kill('SIGTERM');
+      await sleep(800);
+      fs.rmSync(DATA_DIR, { recursive: true, force: true });
+    }
+  }
+
   console.log(`\nKết quả: ${pass} PASS, ${fail} FAIL`);
   process.exit(fail ? 1 : 0);
 }

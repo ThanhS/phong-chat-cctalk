@@ -174,6 +174,103 @@
       .hub-dot.on{background:#1e9e4a;box-shadow:0 0 0 3px rgba(30,158,74,.18);}
       .hub-dot.wait{background:#e6a817;box-shadow:0 0 0 3px rgba(230,168,23,.18);}
       .member .rank-hint{font-size:.62rem;font-weight:700;color:var(--muted);flex:none;}
+      /* Huy hiệu cấp bậc "Lv N" cạnh tên trong danh sách thành viên — nằm
+         TRONG cột tên (cột co giãn) nên không phá lưới 5 cột cố định */
+      .member .mname{display:flex;align-items:center;gap:.4rem;}
+      .member .mname .mname-text{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+      .lv-badge{flex:none;font-size:.6rem;font-weight:800;letter-spacing:.02em;background:var(--blue-soft);color:var(--blue-deep);border:1px solid var(--line);border-radius:999px;padding:.06rem .36rem;line-height:1.35;}
+      @media (prefers-color-scheme: dark){ .lv-badge{color:#8fd0f7;} }
+      .user-chip .umeta{font-size:.7rem;font-weight:700;opacity:.88;white-space:nowrap;flex:none;}
+      /* Thẻ hồ sơ user (mẫu ccTalk cũ): Tên / Mã số / Biệt danh phòng /
+         Chức danh / Điểm thành viên / Điểm tích lũy / Cấp bậc */
+      .profile-card{background:#fffbe8;border:1.5px solid #d9c98a;border-radius:10px;padding:.6rem .75rem;font-size:.88rem;line-height:1.5;color:#3d3410;}
+      @media (prefers-color-scheme: dark){ .profile-card{background:#2e2a12;border-color:#6b5d24;color:#f2e3a1;} }
+      .profile-card .pc-row{display:flex;gap:.5rem;}
+      .profile-card .pc-row b:first-child{flex:none;min-width:118px;font-weight:700;}
+      .profile-card .pc-row .pc-val{font-weight:800;overflow-wrap:anywhere;}
+      #profileCard{position:fixed;z-index:65;width:290px;max-width:88vw;box-shadow:var(--shadow);pointer-events:none;display:none;}
+      #profileCard.show{display:block;}
+      /* Hộp thưởng điểm trong cửa sổ thành viên (QTV / BĐH áo đen) */
+      .award-box{margin-top:1rem;border:1px solid #ecd28a;border-radius:12px;padding:.75rem .8rem;background:#fff8e1;}
+      @media (prefers-color-scheme: dark){ .award-box{background:#33290e;} }
+      .award-row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;}
+      .award-row input[type=number]{width:110px;border:1.5px solid var(--line);border-radius:9px;padding:.5rem .6rem;font-size:.95rem;background:var(--panel);color:var(--ink);}
+      .award-btn{border:0;border-radius:9px;background:linear-gradient(180deg,#f5b921,#e07b24);color:#fff;font-weight:800;padding:.55rem 1rem;font-size:.9rem;min-height:2.25rem;}
+      .award-btn:hover{filter:brightness(1.06);}
+      /* Thông báo thưởng điểm: nền vàng nổi bật trong khung chat */
+      .announce.awarded{background:#ffe98a;border-color:#c9a227;color:#5b4300;}
+      @media (prefers-color-scheme: dark){ .announce.awarded{background:#4a3d0d;color:#ffe98a;border-color:#8a6d1d;} }
+      /* Màn hình chờ bảo trì toàn màn hình — phong cách riêng của phòng
+         chat: nền gradient xanh đậm điểm sao lấp lánh, tab logo treo ở
+         mép trên giữa, thẻ kính mờ ở giữa, minh hoạ công trường vẽ bằng
+         SVG ở góc phải dưới thẻ (bố cục theo ảnh mẫu Thanh gửi, toàn bộ
+         hình/text là của phòng chat, không dùng logo đơn vị khác) */
+      .maint-overlay{position:fixed;inset:0;z-index:80;display:grid;place-items:start center;padding:0 1rem 1.4rem;overflow-y:auto;color:#fff;
+        background:
+          radial-gradient(1.6px 1.6px at 12% 22%, rgba(255,255,255,.85) 50%, transparent 51%),
+          radial-gradient(1.2px 1.2px at 28% 68%, rgba(255,255,255,.6) 50%, transparent 51%),
+          radial-gradient(1.8px 1.8px at 44% 14%, rgba(255,255,255,.75) 50%, transparent 51%),
+          radial-gradient(1.2px 1.2px at 63% 38%, rgba(255,255,255,.55) 50%, transparent 51%),
+          radial-gradient(1.6px 1.6px at 78% 18%, rgba(255,255,255,.8) 50%, transparent 51%),
+          radial-gradient(1.2px 1.2px at 88% 62%, rgba(255,255,255,.6) 50%, transparent 51%),
+          radial-gradient(1.4px 1.4px at 6% 82%, rgba(255,255,255,.5) 50%, transparent 51%),
+          radial-gradient(1.3px 1.3px at 52% 88%, rgba(255,255,255,.55) 50%, transparent 51%),
+          radial-gradient(1.5px 1.5px at 95% 30%, rgba(255,255,255,.7) 50%, transparent 51%),
+          linear-gradient(180deg,#1293cf 0%,#0a6ead 34%,#075b8f 62%,#043a63 100%);}
+      .maint-overlay.hidden{display:none;}
+      .maint-wrap{width:100%;max-width:880px;margin:0 auto;position:relative;}
+      /* Tab logo phòng chat treo ở mép trên giữa, thò xuống đè lên thẻ */
+      .maint-tab{position:relative;z-index:3;width:fit-content;max-width:92%;margin:0 auto;background:#fff;color:#0b5a86;border:2.5px solid #f0a81c;border-top:0;border-radius:0 0 20px 20px;padding:.55rem 1.5rem .75rem;display:flex;align-items:center;gap:.6rem;box-shadow:0 8px 20px rgba(2,32,54,.35);}
+      .maint-tab .mt-flame{width:36px;height:36px;flex:none;border-radius:10px;background:radial-gradient(circle at 30% 25%,#ffd98a,#e07b24 55%,#8a3b12);display:grid;place-items:center;}
+      .maint-tab .mt-name{font-weight:800;font-size:1.02rem;line-height:1.15;color:#0b6fab;white-space:nowrap;}
+      .maint-tab .mt-name small{display:block;font-size:.68rem;font-weight:700;letter-spacing:.14em;color:#e07b24;}
+      .maint-card{position:relative;margin-top:-14px;background:rgba(10,84,128,.52);border:1.5px solid rgba(255,255,255,.28);border-radius:28px;box-shadow:0 24px 50px rgba(2,32,54,.4);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);padding:3rem 2.6rem 1.7rem;overflow:hidden;}
+      .maint-h1{text-align:center;font-size:clamp(1.45rem,4.6vw,2.15rem);font-weight:800;letter-spacing:.03em;line-height:1.3;margin:0 0 .4rem;text-transform:uppercase;text-shadow:0 2px 10px rgba(2,32,54,.45);}
+      .maint-status{display:flex;align-items:center;justify-content:center;gap:.55rem;text-align:center;font-weight:700;font-size:.95rem;color:#ffe1a8;margin:.2rem 0 1.3rem;}
+      .maint-spinner{width:19px;height:19px;flex:none;border-radius:50%;border:3px solid rgba(255,255,255,.35);border-top-color:#ffd34d;animation:maintSpin 1s linear infinite;}
+      @keyframes maintSpin{to{transform:rotate(360deg);}}
+      .maint-list{font-size:clamp(.92rem,2.6vw,1.02rem);line-height:1.65;max-width:640px;position:relative;z-index:2;}
+      .maint-list .mi-row{margin:.28rem 0;}
+      .maint-list .mi-label{font-style:italic;font-weight:800;}
+      .maint-apology{margin-top:1.15rem;font-size:clamp(.92rem,2.6vw,1rem);line-height:1.65;max-width:640px;position:relative;z-index:2;}
+      .maint-sign{margin-top:1rem;font-size:1rem;line-height:1.6;position:relative;z-index:2;}
+      .maint-sign b{display:block;font-size:1.02rem;}
+      .maint-illus{position:absolute;right:10px;bottom:2px;width:302px;max-width:46%;z-index:1;pointer-events:none;}
+      .maint-illus .gear-spin{transform-box:fill-box;transform-origin:center;animation:maintSpin 9s linear infinite;}
+      .maint-illus .gear-spin-rev{transform-box:fill-box;transform-origin:center;animation:maintSpinRev 7s linear infinite;}
+      @keyframes maintSpinRev{to{transform:rotate(-360deg);}}
+      .maint-illus .bob{animation:maintBob 2.6s ease-in-out infinite alternate;}
+      @keyframes maintBob{from{transform:translateY(0);}to{transform:translateY(-3px);}}
+      /* Phần trạng thái + nút bấm: gọn ngay dưới thẻ */
+      .maint-actions{margin-top:1.1rem;display:flex;flex-direction:column;align-items:center;gap:.35rem;}
+      .maint-count{font-size:.88rem;font-weight:700;color:#dceffb;min-height:1.3em;text-align:center;}
+      .maint-retry{width:min(330px,100%);background:linear-gradient(180deg,#ffb03a,#e07b24);color:#fff;border:0;border-radius:999px;padding:.78rem 1rem;font-size:1rem;font-weight:800;box-shadow:0 8px 20px rgba(2,32,54,.4);}
+      .maint-retry:hover{filter:brightness(1.07);}
+      .maint-demo{background:none;border:0;color:rgba(255,255,255,.75);font-size:.84rem;font-weight:700;text-decoration:underline;min-height:2rem;padding:.2rem .5rem;}
+      .maint-demo:hover{color:#fff;}
+      @media (max-width:640px){
+        .maint-card{padding:2.4rem 1.15rem 1.2rem;border-radius:22px;}
+        .maint-tab{padding:.45rem 1rem .6rem;}
+        .maint-tab .mt-name{font-size:.92rem;}
+        /* Điện thoại: minh hoạ thu nhỏ, nằm dưới phần chữ ký trong thẻ */
+        .maint-illus{position:relative;right:auto;bottom:auto;width:230px;max-width:78%;margin:.4rem auto 0;display:block;}
+      }
+      /* Bảng chọn màu chữ + cỡ chữ chat (nút Aa) */
+      .style-pop{position:absolute;bottom:64px;left:3.4rem;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:.65rem .7rem;display:none;z-index:30;width:264px;max-width:86vw;}
+      .style-pop.show{display:block;}
+      .style-pop .sp-title{font-size:.74rem;font-weight:800;letter-spacing:.05em;color:var(--muted);margin:.1rem 0 .4rem;}
+      .swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:.35rem;margin-bottom:.55rem;}
+      .swatch{width:100%;aspect-ratio:1;border-radius:8px;border:2px solid var(--line);cursor:pointer;min-height:0;padding:0;}
+      .swatch.sel{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-soft);}
+      .size-row{display:flex;gap:.35rem;flex-wrap:wrap;}
+      .size-btn{flex:1;border:1.5px solid var(--line);background:var(--panel-2);color:var(--ink);border-radius:8px;padding:.3rem 0;font-weight:800;min-height:2rem;}
+      .size-btn.sel{background:var(--blue);color:#fff;border-color:var(--blue);}
+      .composer .tool.aa{font-weight:800;font-size:.95rem;color:var(--ink);width:auto;padding:0 .7rem;border-radius:999px;}
+      .composer .tool.aa.sel{border-color:var(--blue);color:var(--blue-deep);background:var(--blue-soft);}
+      /* Thanh trượt âm lượng mic / loa trên thanh voice */
+      .vol-ctl{display:flex;align-items:center;gap:.35rem;color:var(--muted);font-size:.78rem;font-weight:700;flex:none;}
+      .vol-ctl input[type=range]{width:72px;accent-color:var(--blue);min-height:36px;}
+      .vol-ctl .vol-val{min-width:3.2ch;font-variant-numeric:tabular-nums;color:var(--ink);}
       .mod-box{margin-top:1rem;border:1px solid var(--line);border-radius:12px;padding:.75rem .8rem;background:var(--panel-2);}
       .mod-box .mod-title{font-size:.8rem;font-weight:800;letter-spacing:.03em;margin-bottom:.55rem;}
       .mod-actions{display:flex;flex-wrap:wrap;gap:.45rem;}
@@ -530,7 +627,9 @@
         .room-title{font-size:1rem;}
         .room-avatar{width:46px;height:46px;}
         .ptt{padding:.55rem .95rem;font-size:.88rem;}
-        .vb-group.vol{display:none;}
+        /* Âm lượng mic / loa vẫn hiện trên điện thoại (gọn lại) để chỉnh được */
+        .vol-ctl{font-size:.72rem;gap:.25rem;}
+        .vol-ctl input[type=range]{width:52px;}
         .messages{padding:.6rem .7rem .9rem;}
         .m-frame-btn{display:inline-flex;}
         .chat-grip{display:flex;align-items:center;justify-content:center;height:22px;flex:none;touch-action:none;cursor:row-resize;background:var(--panel-2);border-top:1px solid var(--line);}
@@ -604,6 +703,111 @@
     </style>
   </head>
   <body>
+    <!-- Màn hình chờ bảo trì toàn màn hình: hiện khi máy chủ đăng nhập
+         không gọi được / đang bảo trì (kể cả lúc Render đang ngủ) — tự
+         thử lại mỗi 15 giây, máy chủ khỏe lại là tự ẩn -->
+    <div class="maint-overlay hidden" id="maintOverlay" role="alertdialog" aria-label="Thông báo bảo trì hệ thống phòng chat">
+      <div class="maint-wrap">
+        <div class="maint-tab" aria-hidden="true">
+          <span class="mt-flame"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2c1 3.5-2.5 5-2.5 8a4.5 4.5 0 0 0 9 0c0-1.2-.5-2.2-1.2-3.2C16.6 8.6 17 10 15.8 11 15 9 13.5 5.5 12 2Z" fill="#fff"/><path d="M12 22a6.5 6.5 0 0 1-6.5-6.5c0-2 .8-3.4 1.7-4.8.4 1 1 1.7 1.9 2.2C8.7 11.6 9 10.4 9.6 9c1 2.3 3.4 3.3 3.4 6.5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg></span>
+          <span class="mt-name">Phòng Chat Cộng Đồng<small>CHAT · VOICE · LÔ TÔ</small></span>
+        </div>
+        <div class="maint-card">
+          <h2 class="maint-h1">Thông báo bảo trì<br/>Hệ thống phòng chat</h2>
+          <div class="maint-status"><span class="maint-spinner" aria-hidden="true"></span><span id="maintTitle">Đang đánh thức máy chủ…</span></div>
+          <div class="maint-list">
+            <div class="mi-row">- <span class="mi-label">Thời gian bảo trì:</span> <span id="maintMsg">Đang cập nhật phiên bản mới — dự kiến vài phút</span></div>
+            <div class="mi-row">- <span class="mi-label">Phạm vi ảnh hưởng:</span> Đăng nhập, chat, voice, Lô Tô</div>
+            <div class="mi-row">- <span class="mi-label">Thời gian dự kiến:</span> Trang tự thử lại mỗi 15 giây — máy chủ sẵn sàng là tự vào phòng ngay, bạn không cần tải lại trang.</div>
+          </div>
+          <p class="maint-apology">Kính mong mọi người thông cảm và vui lòng hạn chế đăng nhập, lên mic trong khoảng thời gian này. Phòng chat sẽ trở lại ngay khi cập nhật xong — cảm ơn mọi người đã luôn đồng hành!</p>
+          <div class="maint-sign">Trân trọng!<b>Ban Quản Trị</b></div>
+          <!-- Minh hoạ công trường tự vẽ bằng SVG: laptop + rào chắn sọc
+               vàng-đen, cọn giao thông, bánh răng cam xoay chậm, cần cẩu
+               và 2 người thợ đội mũ vàng -->
+          <svg class="maint-illus" viewBox="0 0 320 208" aria-hidden="true" focusable="false">
+            <defs>
+              <pattern id="mtStripes" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <rect width="16" height="16" fill="#f7b731"/>
+                <rect width="8" height="16" fill="#20303d"/>
+              </pattern>
+            </defs>
+            <!-- Cần cẩu phía trên bên phải -->
+            <g stroke="#bfe3f7" stroke-width="3" fill="none" stroke-linecap="round" opacity=".9">
+              <path d="M238 62 V14 M238 14 H306 M238 14 L268 34 M292 14 v16"/>
+              <path d="M232 62 h12 M236 40 h4"/>
+            </g>
+            <rect x="286" y="30" width="11" height="9" rx="1.5" fill="#f0a81c"/>
+            <!-- Người thợ ngồi trên nóc laptop -->
+            <g class="bob">
+              <path d="M96 62 l14 10 12 2" stroke="#f5c48a" stroke-width="5" fill="none" stroke-linecap="round"/>
+              <rect x="88" y="40" width="17" height="20" rx="5" fill="#f07b24"/>
+              <circle cx="97" cy="33" r="7.5" fill="#f5c48a"/>
+              <path d="M88.5 31 a8.5 8.5 0 0 1 17 0 Z" fill="#ffd34d"/>
+              <rect x="87" y="30.5" width="20" height="3.4" rx="1.7" fill="#f5b921"/>
+              <path d="M92 60 l-3 14 M100 60 l6 12" stroke="#37505f" stroke-width="5.5" stroke-linecap="round"/>
+            </g>
+            <!-- Laptop -->
+            <rect x="70" y="76" width="196" height="104" rx="9" fill="#dfe9ef"/>
+            <rect x="78" y="84" width="180" height="88" rx="5" fill="#8fd0f7"/>
+            <rect x="78" y="84" width="180" height="88" rx="5" fill="url(#mtStripes)" opacity=".14"/>
+            <path d="M58 182 h220 l10 14 a6 6 0 0 1 -6 8 H54 a6 6 0 0 1 -6 -8 Z" fill="#b9c9d4"/>
+            <rect x="138" y="186" width="60" height="7" rx="3.5" fill="#8fa9ba"/>
+            <!-- Rào chắn sọc vàng-đen chắn ngang màn hình -->
+            <g transform="rotate(-2 168 128)">
+              <rect x="66" y="116" width="204" height="24" rx="4" fill="url(#mtStripes)" stroke="#20303d" stroke-width="2.5"/>
+            </g>
+            <!-- Cọn giao thông trước laptop -->
+            <g>
+              <path d="M150 196 l9 -30 h10 l9 30 Z" fill="#f07b24"/>
+              <path d="M156.5 176 h16 l2.6 9 h-21.2 Z" fill="#fff"/>
+              <rect x="144" y="195" width="42" height="6" rx="2.5" fill="#d9631a"/>
+            </g>
+            <!-- Bánh răng cam: lớn dưới trái (xoay chậm), nhỏ trên phải (xoay ngược) -->
+            <g class="gear-spin" fill="#f5a623">
+              <g transform="translate(52 168)">
+                <rect x="-4.5" y="-21" width="9" height="42" rx="2.5"/>
+                <rect x="-4.5" y="-21" width="9" height="42" rx="2.5" transform="rotate(45)"/>
+                <rect x="-4.5" y="-21" width="9" height="42" rx="2.5" transform="rotate(90)"/>
+                <rect x="-4.5" y="-21" width="9" height="42" rx="2.5" transform="rotate(135)"/>
+                <circle r="14.5"/>
+                <circle r="6" fill="#075b8f"/>
+              </g>
+            </g>
+            <g class="gear-spin-rev" fill="#f07b24">
+              <g transform="translate(282 96)">
+                <rect x="-3.6" y="-16" width="7.2" height="32" rx="2"/>
+                <rect x="-3.6" y="-16" width="7.2" height="32" rx="2" transform="rotate(60)"/>
+                <rect x="-3.6" y="-16" width="7.2" height="32" rx="2" transform="rotate(120)"/>
+                <circle r="11"/>
+                <circle r="4.6" fill="#075b8f"/>
+              </g>
+            </g>
+            <!-- Người thợ đứng bên phải cầm cờ lê -->
+            <g class="bob">
+              <rect x="292" y="140" width="16" height="24" rx="5" fill="#f07b24"/>
+              <circle cx="300" cy="132" r="7.5" fill="#f5c48a"/>
+              <path d="M291.5 129.5 a8.5 8.5 0 0 1 17 0 Z" fill="#ffd34d"/>
+              <rect x="290.5" y="129" width="19" height="3.4" rx="1.7" fill="#f5b921"/>
+              <path d="M294 164 l-2 22 M306 164 l3 22" stroke="#37505f" stroke-width="5.5" stroke-linecap="round"/>
+              <path d="M293 146 l-11 8" stroke="#f5c48a" stroke-width="5" stroke-linecap="round"/>
+              <path d="M282 154 l-5 -7 M277 147 a4.4 4.4 0 1 1 5.6 5.2" stroke="#dfe9ef" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+            </g>
+            <!-- Dấu cộng trang trí như ảnh mẫu -->
+            <path d="M30 96 h10 M35 91 v10 M296 52 h8 M300 48 v8" stroke="rgba(255,255,255,.65)" stroke-width="2.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="maint-actions">
+          <div class="maint-count" id="maintCount"></div>
+          <button class="maint-retry" id="maintRetryBtn" type="button">Thử lại ngay</button>
+          <button class="maint-demo" id="maintDemoBtn" type="button">Vào chế độ demo (xem thử offline, mỗi máy một phòng riêng)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thẻ hồ sơ nổi khi rê chuột / chạm vào tên trong danh sách thành viên -->
+    <div class="profile-card" id="profileCard" aria-hidden="true"></div>
+
     <!-- Auth overlay: đăng nhập / đăng ký -->
     <div class="overlay" id="loginOverlay">
       <div class="login-card">
@@ -685,6 +889,7 @@
     <div class="overlay hidden" id="memberModal">
       <div class="login-card">
         <h2 id="mmTitle">Thông tin thành viên</h2>
+        <div class="profile-card" id="mmProfile" style="margin-bottom:.4rem;"></div>
         <p id="mmDesc"></p>
         <label for="mmName">Tên hiển thị trong phòng</label>
         <input type="text" id="mmName" maxlength="24" placeholder="Ví dụ: ThanhS" />
@@ -711,6 +916,14 @@
           </div>
           <div style="font-size:.8rem;color:var(--muted);margin-top:.5rem;line-height:1.45;" id="mmModHint"></div>
         </div>
+        <div class="award-box" id="mmAwardWrap" style="display:none;">
+          <div class="mod-title" style="font-size:.8rem;font-weight:800;letter-spacing:.03em;margin-bottom:.55rem;">THƯỞNG ĐIỂM</div>
+          <div class="award-row">
+            <input type="number" id="mmAwardAmt" min="1" max="100" step="1" value="10" aria-label="Số điểm thưởng" />
+            <button class="award-btn" id="mmAwardBtn" type="button">Thưởng điểm</button>
+          </div>
+          <div style="font-size:.8rem;color:var(--muted);margin-top:.5rem;line-height:1.45;" id="mmAwardHint"></div>
+        </div>
         <div class="form-error" id="mmError"></div>
         <div class="modal-actions">
           <button class="ghost-btn" id="mmCancel" type="button">Đóng</button>
@@ -731,6 +944,9 @@
         <div class="rank-row"><span class="shirt-dot yellow"></span><span><b>Vàng — BĐH:</b> điều hành phòng, <b>không</b> cấm được áo đỏ và áo đen. Cấp được áo tím.</span></div>
         <div class="rank-row"><span class="shirt-dot purple"></span><span><b>Tím — BĐH:</b> điều hành phòng, <b>không</b> cấm được áo đỏ, đen và vàng. Không cấp áo cho người khác.</span></div>
         <div class="rank-row"><span class="shirt-dot member"></span><span><b>Thành viên thường:</b> chat, lên mic theo chế độ của phòng, thả tim, chơi lô tô — không có quyền quản lý.</span></div>
+        <div class="rank-note"><b>Điểm &amp; cấp bậc:</b> online đủ 1 giờ được <b>+10 điểm</b>; mỗi lượt thả tim (vote) cho bạn khi bạn đang trên mic được <b>+1 điểm</b>. Điểm gồm <b>điểm thành viên</b> (tổng cả quá trình) và <b>điểm tích lũy hôm nay</b>. Cấp bậc = 1 + điểm thành viên ÷ 40 (tối đa Lv 100). Bấm vào tên từng người để xem thẻ hồ sơ: mã số, điểm và cấp bậc của họ.</div>
+        <div class="rank-note"><b>Điểm thưởng online:</b> áo đỏ (QTV) online 1 giờ được <b>+15 điểm</b>, áo đen (BĐH) được <b>+12 điểm</b> thay vì +10 như thành viên thường.</div>
+        <div class="rank-note"><b>Quyền thưởng điểm:</b> áo đỏ thưởng được <b>1–100 điểm/lần</b> (tối đa 1.000 điểm/ngày); áo đen thưởng được <b>1–50 điểm/lần</b> (tối đa 300 điểm/ngày) và chỉ thưởng cho người dưới cấp mình. Không ai tự thưởng cho chính mình. Mở thẻ hồ sơ của một người rồi dùng mục “Thưởng điểm” ở đó.</div>
         <div class="rank-note">Áo vàng / tím do QTV hoặc áo đen cấp sẽ hiện thêm logo BĐH cạnh tên. Bấm vào tên từng người trong danh sách để xem các quyền áp dụng cho người đó.</div>
       </div>
     </div>
@@ -745,6 +961,7 @@
         <div class="user-chip" id="userChip">
           <span class="uava" id="userAva">?</span>
           <span class="uname" id="userChipName">—</span>
+          <span class="umeta" id="userChipMeta" title="Mã số và cấp bậc của bạn"></span>
           <span class="role-badge" id="userRoleBadge">ADMIN</span>
         </div>
         <button class="top-ico" id="notifyBtn" aria-label="Thông báo">
@@ -943,6 +1160,13 @@
 
           <div class="composer">
             <div class="emoji-pop" id="emojiPop"></div>
+            <div class="style-pop" id="stylePop" aria-label="Chọn màu chữ và cỡ chữ">
+              <div class="sp-title">MÀU CHỮ CỦA BẠN</div>
+              <div class="swatches" id="styleSwatches"></div>
+              <div class="sp-title">CỠ CHỮ</div>
+              <div class="size-row" id="styleSizes"></div>
+            </div>
+            <button class="tool aa" id="styleBtn" type="button" aria-label="Đổi màu chữ và cỡ chữ" title="Đổi màu chữ + cỡ chữ của tin nhắn bạn gửi">Aa</button>
             <button class="tool" id="emojiBtn" aria-label="Chèn biểu cảm">
               <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1 1.3 2.2 2 3.5 2s2.5-.7 3.5-2"/><circle cx="9" cy="9.8" r=".9" fill="currentColor" stroke="none"/><circle cx="15" cy="9.8" r=".9" fill="currentColor" stroke="none"/></svg>
             </button>
@@ -957,8 +1181,15 @@
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2.5 9a15 15 0 0 1 19 0M5.5 12.5a10.5 10.5 0 0 1 13 0M8.6 16a6 6 0 0 1 6.8 0"/><circle cx="12" cy="19.4" r="1.3" fill="currentColor" stroke="none"/></svg>
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h3l5 4.5v-13L7 10H4Z" fill="currentColor" stroke="none"/><path d="M15 9.5a4 4 0 0 1 0 5M17.5 7a7.5 7.5 0 0 1 0 10"/></svg>
             </div>
-            <div class="vb-group vol">
-              <input type="range" id="volSlider" min="0" max="100" value="70" aria-label="Âm lượng" />
+            <div class="vol-ctl" title="Âm lượng mic của bạn: 0–200% — tăng trên 100% là khuếch đại tiếng nói của bạn cho người khác nghe rõ hơn">
+              <span>🎤 Mic</span>
+              <input type="range" id="micGainSlider" min="0" max="200" step="5" value="100" aria-label="Âm lượng mic (0 đến 200 phần trăm)" />
+              <span class="vol-val" id="micGainVal">100%</span>
+            </div>
+            <div class="vol-ctl" title="Âm lượng loa: tiếng của mọi người khác trong phòng (0–100%)">
+              <span>🔊 Loa</span>
+              <input type="range" id="volSlider" min="0" max="100" value="70" aria-label="Âm lượng loa" />
+              <span class="vol-val" id="volVal">70%</span>
             </div>
             <div class="talk-mode" role="group" aria-label="Chế độ nói chuyện">
               <button id="tmPtt" type="button" class="sel" title="Như ccTalk gốc: giữ phím F2 hoặc giữ nút mic để nói trực tiếp, thả ra là dừng nói">Giữ F2 để nói</button>
@@ -1193,14 +1424,232 @@
         try{ localStorage.setItem("cctalk.gender." + String(id || "").toLowerCase(), gender === "F" ? "F" : "M"); }catch(e){}
       }
       function accFromServer(d, gender){
-        var rank = String((d && d.rank) || "member").toLowerCase();
-        var acc = { id: d.id, name: d.name || d.id, role: rank === "qtv" ? "admin" : "user", memberTag: null, grant: null, gender: gender || savedGenderFor(d.id), hue: hueFromId(d.id) };
+        var src = (d && (d.user || d.profile)) || d || {};
+        var rank = String(src.rank || (d && d.rank) || "member").toLowerCase();
+        var srvGender = src.gender === "female" ? "F" : src.gender === "male" ? "M" : null;
+        var acc = { id: src.id || d.id, name: src.name || (d && d.name) || src.id || d.id, role: rank === "qtv" ? "admin" : "user", memberTag: null, grant: null, gender: gender || srvGender || savedGenderFor(src.id || d.id), hue: hueFromId(src.id || d.id), code: src.code != null ? String(src.code) : null, points: src.points != null ? parseInt(src.points, 10) || 0 : null, daily: src.daily != null ? parseInt(src.daily, 10) || 0 : null };
         if(rank === "bdh-den"){ acc.memberTag = "BĐH"; }
         else if(rank === "bdh-vang"){ acc.memberTag = "BĐH"; acc.grant = "yellow"; }
         else if(rank === "bdh-tim"){ acc.memberTag = "BĐH"; acc.grant = "purple"; }
         return acc;
       }
       var ID_RE = /^[A-Za-z0-9_]+$/;
+
+      /* ================= Mã số + điểm + cấp bậc (v3.5) =================
+         Mỗi user có: code (mã số 9 chữ số), points (điểm thành viên —
+         tổng cả quá trình), daily (điểm tích lũy hôm nay), level (cấp
+         bậc, tính = min(100, 1 + floor(points/40))). Máy chủ v3.5 gửi
+         các trường này trong /login, /register, /me (field user),
+         auth-ok.user, presence và room-state.members. Máy chủ cũ chưa
+         có thì trang tự sinh số giả lập xác định theo ID/tên (demo và
+         tương thích ngược) để thẻ hồ sơ vẫn đầy đủ. */
+      function levelOfPoints(p){ return Math.min(100, 1 + Math.floor(Math.max(0, parseInt(p, 10) || 0) / 40)); }
+      var RANK_TITLES = { "qtv": "Quản trị viên phòng chính", "bdh-den": "Ban điều hành (áo đen)", "bdh-vang": "Ban điều hành (áo vàng)", "bdh-tim": "Ban điều hành (áo tím)", "member": "Thành viên" };
+      function rankTitleOf(srvRank){ return RANK_TITLES[String(srvRank || "member").toLowerCase()] || "Thành viên"; }
+      function srvRankOfMember(m){
+        if(!m) return "member";
+        if(m.tag === "ADMIN" || m.tag === "QTV" || (m.me && state && state.role === "admin")) return "qtv";
+        if(m.grant === "yellow") return "bdh-vang";
+        if(m.grant === "purple") return "bdh-tim";
+        if(m.tag === "BĐH") return "bdh-den";
+        return "member";
+      }
+      function hashStr(s){
+        var h = 2166136261, str = String(s || "");
+        for(var i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+        return h >>> 0;
+      }
+      /* Hồ sơ giả lập xác định (deterministic) cho bot / user demo và khi
+         máy chủ chưa trả số: cùng 1 người thì mọi lần mở đều ra cùng mã
+         số / điểm, không nhảy số lung tung */
+      function fakeProfile(seed){
+        var h = hashStr(seed || "user");
+        var points = h % 2400;
+        return { code: String(100000000 + (h % 900000000)), points: points, daily: Math.floor(points / 6) % 480, level: levelOfPoints(points) };
+      }
+      function profileOfMember(m){
+        if(!m) return fakeProfile("user");
+        var seed = m.srvId || m.loginId || m.name || "user";
+        var fb = fakeProfile(seed);
+        var points = (m.points != null && !isNaN(parseInt(m.points, 10))) ? parseInt(m.points, 10) : fb.points;
+        return {
+          loginId: m.srvId || m.loginId || (m.me && state ? state.userId : null) || seed,
+          code: m.code ? String(m.code) : fb.code,
+          points: points,
+          daily: (m.daily != null && !isNaN(parseInt(m.daily, 10))) ? parseInt(m.daily, 10) : fb.daily,
+          level: (m.level != null && !isNaN(parseInt(m.level, 10))) ? parseInt(m.level, 10) : levelOfPoints(points)
+        };
+      }
+      function myProfile(){
+        var base = (authProfile && (authProfile.code != null || authProfile.points != null)) ? authProfile : null;
+        var fb = fakeProfile(state.userId || state.user || "me");
+        var points = base && base.points != null ? parseInt(base.points, 10) || 0 : (state.myPoints != null ? state.myPoints : fb.points);
+        return {
+          loginId: state.userId || "",
+          code: base && base.code ? String(base.code) : (state.myCode || fb.code),
+          points: points,
+          daily: base && base.daily != null ? parseInt(base.daily, 10) || 0 : (state.myDaily != null ? state.myDaily : fb.daily),
+          level: levelOfPoints(points)
+        };
+      }
+      function profileCardHTML(m){
+        var p = profileOfMember(m);
+        return '<div class="pc-row"><b>Tên:</b><span class="pc-val">' + esc(p.loginId) + '</span></div>'
+          + '<div class="pc-row"><b>Mã số:</b><span class="pc-val">' + esc(p.code) + '</span></div>'
+          + '<div class="pc-row"><b>Biệt danh phòng:</b><span class="pc-val">' + esc(m.name) + '</span></div>'
+          + '<div class="pc-row"><b>Chức danh:</b><span class="pc-val">' + esc(m.title || rankTitleOf(srvRankOfMember(m))) + '</span></div>'
+          + '<div class="pc-row"><b>Điểm thành viên:</b><span class="pc-val">' + p.points + '</span></div>'
+          + '<div class="pc-row"><b>Điểm tích lũy:</b><span class="pc-val">' + p.daily + '</span></div>'
+          + '<div class="pc-row"><b>Cấp bậc:</b><span class="pc-val">' + p.level + '</span></div>';
+      }
+      function updateUserChipMeta(){
+        var el = $("userChipMeta"); if(!el || !state.user) return;
+        var p = myProfile();
+        el.textContent = "· Mã " + p.code + " · Lv " + p.level + " · " + p.points + "đ";
+      }
+      /* Áp hồ sơ máy chủ trả (login/register/me/auth-ok) vào trạng thái của mình */
+      function applyMyServerProfile(d){
+        if(!d) return;
+        var src = d.user || d.profile || d;
+        if(src.code != null) state.myCode = String(src.code);
+        if(src.points != null){ state.myPoints = parseInt(src.points, 10) || 0; }
+        if(src.daily != null){ state.myDaily = parseInt(src.daily, 10) || 0; }
+        if(authProfile){
+          if(src.code != null) authProfile.code = String(src.code);
+          if(src.points != null) authProfile.points = parseInt(src.points, 10) || 0;
+          if(src.daily != null) authProfile.daily = parseInt(src.daily, 10) || 0;
+          saveAuthSession(authSession, authProfile);
+        }
+        updateUserChipMeta();
+      }
+      function profileFromServerData(d){
+        var src = (d && (d.user || d.profile)) || d || {};
+        var prof = { id: src.id || (d && d.id), name: src.name || (d && d.name), rank: src.rank || (d && d.rank) };
+        if(src.code != null) prof.code = String(src.code);
+        if(src.points != null) prof.points = parseInt(src.points, 10) || 0;
+        if(src.daily != null) prof.daily = parseInt(src.daily, 10) || 0;
+        return prof;
+      }
+
+      /* ================= Màn hình chờ bảo trì (mục 4 của SPEC v3.5) =================
+         Hiện toàn màn hình khi: có địa chỉ máy chủ nhưng /health lỗi mạng
+         / không phải JSON / 503 / maintenance:true; hub mất kết nối sau
+         hết lượt thử lại; /login, /register trả 503 maintenance. 90 giây
+         đầu hiện "Đang đánh thức máy chủ…" (Render free ngủ), sau đó
+         chuyển "Hệ thống đang bảo trì / cập nhật". Tự thử lại /health
+         mỗi 15 giây; máy chủ trả ok + maintenance:false thì tự ẩn. */
+      var maint = { active: false, since: 0, timer: null, tick: null, nextAt: 0, msg: "", suppressed: false, checking: false };
+      function maintShow(reasonMsg){
+        if(!authServer) return;
+        if(maint.suppressed) return;
+        if(!maint.active){ maint.active = true; maint.since = Date.now(); }
+        if(reasonMsg) maint.msg = String(reasonMsg);
+        var ov = $("maintOverlay"); if(ov) ov.classList.remove("hidden");
+        maintRender();
+        if(!maint.tick) maint.tick = setInterval(maintRender, 1000);
+        if(!maint.timer){
+          maint.nextAt = Date.now() + 15000;
+          maint.timer = setInterval(function(){ maintCheck(false); }, 15000);
+        }
+      }
+      function maintHide(){
+        maint.active = false; maint.since = 0; maint.msg = ""; maint.suppressed = false;
+        var ov = $("maintOverlay"); if(ov) ov.classList.add("hidden");
+        if(maint.timer){ clearInterval(maint.timer); maint.timer = null; }
+        if(maint.tick){ clearInterval(maint.tick); maint.tick = null; }
+      }
+      function maintRender(){
+        if(!maint.active) return;
+        var waking = (Date.now() - maint.since) < 90000;
+        var t = $("maintTitle"); if(t) t.textContent = waking ? "Đang đánh thức máy chủ…" : "Hệ thống đang bảo trì / cập nhật";
+        var m = $("maintMsg");
+        /* Dòng "Thời gian bảo trì": ưu tiên lời nhắn MAINTENANCE_MESSAGE
+           máy chủ gửi (qua /health hoặc lỗi 503); không có thì dùng câu
+           mặc định theo yêu cầu */
+        if(m) m.textContent = maint.msg || "Đang cập nhật phiên bản mới — dự kiến vài phút";
+        var c = $("maintCount");
+        if(c){
+          var s = Math.max(0, Math.ceil((maint.nextAt - Date.now()) / 1000));
+          c.textContent = maint.checking ? "Đang kiểm tra máy chủ…" : ("Tự thử lại sau " + s + " giây");
+        }
+      }
+      function maintCheck(manual){
+        if(!authServer){ maintHide(); return; }
+        if(maint.checking) return;
+        maint.checking = true; maintRender();
+        var done = function(ok, data){
+          maint.checking = false;
+          maint.nextAt = Date.now() + 15000;
+          if(ok){
+            var wasActive = maint.active;
+            maintHide();
+            if(wasActive){
+              toast("Máy chủ đã sẵn sàng — tiếp tục vào phòng");
+              /* Session còn hạn thì vào lại luôn, chưa có thì ở màn đăng nhập */
+              if(authSession && !state.user){
+                authFetch("/me").then(function(r){
+                  if(r.ok && r.data && r.data.id){ saveAuthSession(authSession, profileFromServerData(r.data)); enterAs(accFromServer(r.data)); }
+                }).catch(function(){});
+              } else if(state.user && typeof hubConnect === "function" && hub.mode === "off"){
+                hubConnect();
+              }
+            }
+          } else {
+            if(data && data.message) maint.msg = String(data.message);
+            maintShow();
+          }
+          maintRender();
+        };
+        fetch(authServer + "/health").then(function(res){
+          return res.json().then(function(data){ return { res: res, data: data }; }).catch(function(){ return { res: res, data: null }; });
+        }).then(function(x){
+          var ok = x.res.ok && x.data && x.data.ok === true && x.data.maintenance !== true;
+          done(ok, x.data);
+        }).catch(function(){ done(false, null); });
+      }
+
+      /* ================= Màu chữ + cỡ chữ chat (mục 3 của SPEC v3.5) ================= */
+      var CHAT_COLORS = ["#1f2937", "#dc2626", "#ea580c", "#ca8a04", "#16a34a", "#0d9488", "#2563eb", "#7c3aed", "#db2777", "#92400e", "#475569", "#000000"];
+      var CHAT_SIZES = [12, 14, 16, 18, 20];
+      var chatStyle = { color: "#1f2937", size: 14 };
+      try{
+        var savedStyle = JSON.parse(localStorage.getItem("cctalk.chatStyle") || "null");
+        if(savedStyle){
+          if(CHAT_COLORS.indexOf(savedStyle.color) >= 0) chatStyle.color = savedStyle.color;
+          if(CHAT_SIZES.indexOf(parseInt(savedStyle.size, 10)) >= 0) chatStyle.size = parseInt(savedStyle.size, 10);
+        }
+      }catch(e){}
+      function saveChatStyle(){ try{ localStorage.setItem("cctalk.chatStyle", JSON.stringify(chatStyle)); }catch(e){} }
+      function validMsgStyle(st){
+        if(!st || typeof st !== "object") return null;
+        var c = String(st.color || "").toLowerCase();
+        var s = parseInt(st.size, 10);
+        if(CHAT_COLORS.indexOf(c) < 0 || CHAT_SIZES.indexOf(s) < 0) return null;
+        return { color: c, size: s };
+      }
+      function msgTextStyleAttr(st){
+        var v = validMsgStyle(st); if(!v) return "";
+        var color = v.color;
+        /* Dark theme: màu mặc định / đen thuần đọc không được trên nền tối
+           -> dùng màu chữ mặc định của theme */
+        var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        if(dark && (color === "#1f2937" || color === "#000000")) color = "var(--ink)";
+        return ' style="color:' + color + ';font-size:' + v.size + 'px"';
+      }
+
+      /* ================= Âm lượng mic (gain) + loa =================
+         Mic: GainNode Web Audio 0–200% đặt trước khi phát tiếng lên
+         PeerJS / LiveKit; đồng hồ mức mic đo SAU gain. Loa: 0–100% áp
+         cho toàn bộ tiếng người khác (PeerJS + LiveKit) qua masterVol.
+         Cả hai lưu trên máy này. */
+      var micGainVal = 1;
+      var speakerVolVal = 0.7;
+      try{
+        var mg = parseFloat(localStorage.getItem("cctalk.micGain"));
+        if(!isNaN(mg)) micGainVal = Math.max(0, Math.min(2, mg));
+        var sv = parseFloat(localStorage.getItem("cctalk.speakerVol"));
+        if(!isNaN(sv)) speakerVolVal = Math.max(0, Math.min(1, sv));
+      }catch(e){}
 
       /* ================= Hub WebSocket: chế độ MÁY CHỦ THẬT =================
          Sau khi đăng nhập xong, trang tự nối WebSocket tới hub của chính
@@ -1264,7 +1713,7 @@
       function hubMemberLocal(sm){
         var rank = String((sm && sm.rank) || "member").toLowerCase();
         var isMe = !!(state.userId && sm.id === state.userId);
-        var m = { name: sm.name || sm.id, mic: isMe, tag: null, gender: (sm.gender === "F" || sm.gender === "M") ? sm.gender : genderOf(sm.name), hue: hueFromId(sm.id), grant: null, grantedBy: null, chatBanned: false, micBanned: false, bot: !!sm.bot, srvId: sm.id };
+        var m = { name: sm.name || sm.id, mic: isMe, tag: null, gender: (sm.gender === "F" || sm.gender === "M") ? sm.gender : (sm.gender === "female" ? "F" : sm.gender === "male" ? "M" : genderOf(sm.name)), hue: hueFromId(sm.id), grant: null, grantedBy: null, chatBanned: false, micBanned: false, bot: !!sm.bot, srvId: sm.id, title: sm.title || null, code: sm.code != null ? String(sm.code) : null, points: sm.points != null ? parseInt(sm.points, 10) || 0 : null, daily: sm.daily != null ? parseInt(sm.daily, 10) || 0 : null, level: sm.level != null ? parseInt(sm.level, 10) || null : null };
         if(rank === "qtv") m.tag = "QTV";
         else if(rank === "bdh-den") m.tag = "BĐH";
         else if(rank === "bdh-vang"){ m.tag = "BĐH"; m.grant = "yellow"; m.grantedBy = "black"; }
@@ -1286,7 +1735,7 @@
         var isMe = !!(state.userId && gm.userId === state.userId);
         var cls = gm.bot ? (gm.gender === "F" ? "c-purple" : "c-blue") : CLASSES[hueFromId(gm.userId || gm.name) % CLASSES.length];
         var t = gm.time ? new Date(gm.time) : new Date();
-        return { type:"msg", name: gm.name, text: gm.text, cls: cls, time: isNaN(t.getTime()) ? timeNow() : t.toLocaleTimeString("en-US", {hour:"numeric", minute:"2-digit", second:"2-digit", hour12:true}), me: isMe, bot: !!gm.bot };
+        return { type:"msg", name: gm.name, text: gm.text, cls: cls, style: validMsgStyle(gm.style), time: isNaN(t.getTime()) ? timeNow() : t.toLocaleTimeString("en-US", {hour:"numeric", minute:"2-digit", second:"2-digit", hour12:true}), me: isMe, bot: !!gm.bot };
       }
       function hubApplyRoomState(d){
         var r = hubRoomBySlug(d.room); if(!r) return;
@@ -1312,13 +1761,18 @@
       function hubApplyRoomCounts(d){
         if(!Array.isArray(d.counts)) return;
         d.counts.forEach(function(c){ if(c && c.room) hub.counts[c.room] = Math.max(0, parseInt(c.count, 10) || 0); });
-        renderRoomList();
+        renderRoomList(); updateOnline();
       }
       /* Số hiển thị cạnh mỗi phòng ở cột trái: chế độ máy chủ lấy từ
          room-counts mới nhất của máy chủ; chưa có số của phòng đó (hoặc
          đang ở chế độ demo) thì dùng số đếm local như trước. */
       function roomDisplayCount(r){
         if(typeof hubActive === "function" && hubActive()){
+          /* Phòng ĐANG Ở: lấy đúng số dòng danh sách thành viên đang vẽ
+             để 3 nơi (số cạnh phòng, Online trên tiêu đề, số dòng thành
+             viên) luôn bằng nhau tuyệt đối; phòng khác lấy room-counts
+             mới nhất của máy chủ */
+          if(r.id === state.roomId && state.user) return r.members.length;
           var slug = hubRoomSlug(r);
           if(slug && hub.counts[slug] != null) return hub.counts[slug];
         }
@@ -1343,6 +1797,30 @@
         if(rank === "bdh-vang") return "BĐH (áo vàng)";
         if(rank === "bdh-tim") return "BĐH (áo tím)";
         return "thành viên thường";
+      }
+      /* Máy chủ báo điểm của 1 user vừa đổi ({type:'points', userId,
+         points, daily, level}): cập nhật mọi bản ghi của user đó trong
+         danh sách thành viên các phòng; nếu là chính mình thì cập nhật
+         luôn chip mã số / cấp bậc / điểm ở góc trên */
+      function hubApplyPoints(d){
+        if(!d || !d.userId) return;
+        var pts = parseInt(d.points, 10), dly = parseInt(d.daily, 10), lvl = parseInt(d.level, 10);
+        rooms.forEach(function(r){
+          r.members.forEach(function(m){
+            if(m.srvId === d.userId){
+              if(!isNaN(pts)) m.points = pts;
+              if(!isNaN(dly)) m.daily = dly;
+              if(!isNaN(lvl)) m.level = lvl;
+            }
+          });
+        });
+        if(state.userId && d.userId === state.userId){
+          if(!isNaN(pts)) state.myPoints = pts;
+          if(!isNaN(dly)) state.myDaily = dly;
+          if(authProfile){ if(!isNaN(pts)) authProfile.points = pts; if(!isNaN(dly)) authProfile.daily = dly; saveAuthSession(authSession, authProfile); }
+          updateUserChipMeta();
+        }
+        renderRoomList();
       }
       /* Máy chủ báo có người vừa được cấp / gỡ áo ({type:'rank-changed',
          userId, name, rank}): cập nhật NGAY cấp bậc của người đó ở mọi
@@ -1440,7 +1918,12 @@
            đóng lại, Lô Tô quay về chạy local như cũ */
         if(typeof lotoToIdle === "function" && typeof loto !== "undefined" && (loto.srv || loto.phase !== "idle")) lotoToIdle();
         if(state.user) startBots();
-        if(notify) toast("Mất kết nối máy chủ chat — đã quay về chế độ bot demo (mỗi máy một phòng riêng)");
+        if(notify){
+          toast("Mất kết nối máy chủ chat — đã quay về chế độ bot demo (mỗi máy một phòng riêng)");
+          /* Mất kết nối hẳn sau hết lượt thử lại: hiện màn hình chờ bảo
+             trì (có nút vào demo để tắt hẳn nếu muốn xem offline) */
+          maintShow();
+        }
       }
       function hubScheduleReconnect(){
         if(hub.mode === "on") hub.mode = "connecting";
@@ -1460,8 +1943,26 @@
         if(!d || !d.type) return;
         if(d.type === "auth-ok"){
           hub.attempts = 0;
+          if(d.user) applyMyServerProfile(d.user);
           hubEnterServerMode();
           hubJoinCurrent();
+        } else if(d.type === "points"){
+          /* Điểm của 1 user vừa đổi (online đủ giờ / được vote / được
+             thưởng): cập nhật hồ sơ của họ ở mọi phòng + chip của mình */
+          hubApplyPoints(d);
+        } else if(d.type === "awarded"){
+          /* Có người được QTV / BĐH áo đen thưởng điểm: thông báo nền
+             vàng nổi bật trong khung chat. Máy chủ phát 'awarded' vào
+             room của người nhận; khi gửi trực tiếp cho người tặng/nhận
+             ngoài room đó thì room có thể null hoặc khác phòng mình
+             đang ở — tin trực tiếp chỉ tới máy người liên quan nên cứ
+             hiện ở phòng hiện tại */
+          var awr = hubRoomBySlug(d.room);
+          var awRoomId = (awr && awr.id === state.roomId) ? awr.id : state.roomId;
+          if(awRoomId && roomById(awRoomId)){
+            addMessage(awRoomId, { type:"announce", awarded:true, text: "🏆 " + (d.fromName || "BĐH") + " đã thưởng " + (parseInt(d.amount, 10) || 0) + " điểm cho " + (d.toName || "") + "!" });
+            if(awRoomId === state.roomId) sfx("ding");
+          }
         } else if(d.type === "rooms"){
           hubSyncRooms(d.rooms);
         } else if(d.type === "room-state"){
@@ -1520,7 +2021,12 @@
           }
         } else if(d.type === "error"){
           if(d.code === "unauthorized"){ hubDisconnect(); sessionExpired(); }
-          else if(d.message) toast(d.message);
+          else if(d.code === "maintenance"){ maintShow(d.message || null); }
+          else if(d.message){
+            toast(d.message);
+            /* Lỗi thưởng điểm hiện thêm ngay trong cửa sổ thành viên đang mở */
+            if(["forbidden", "bad-amount", "bad-user", "award-limit"].indexOf(d.code) >= 0 && !$("memberModal").classList.contains("hidden")) formError($("mmError"), d.message);
+          }
         }
       }
       function hubConnect(){
@@ -1536,9 +2042,11 @@
         ws.onopen = function(){ hubSend({ type:"auth", token: authSession }); };
         ws.onmessage = hubOnMessage;
         ws.onerror = function(){ try{ ws.close(); }catch(e){} };
-        ws.onclose = function(){
+        ws.onclose = function(ev){
           if(hub.ws === ws) hub.ws = null;
           if(hub.intentional || !state.user){ hub.mode = "off"; hubSetStatus(); return; }
+          /* Máy chủ đóng mã 4503 = đang bảo trì: hiện màn chờ ngay */
+          if(ev && ev.code === 4503){ maintShow(); }
           hubScheduleReconnect();
         };
       }
@@ -1570,7 +2078,7 @@
         if(gender==="M" || gender==="F") return gender;
         return FEMALE_NAMES.indexOf(name)>=0 ? "F" : "M";
       }
-      function mkMember(name, mic, tag, gender, grant, grantedBy){ return { name:name, mic:!!mic, tag:tag||null, gender: genderOf(name, gender), hue: Math.floor(rand(0,360)), grant: grant||null, grantedBy: grantedBy||null, chatBanned:false, micBanned:false }; }
+      function mkMember(name, mic, tag, gender, grant, grantedBy){ var fp = fakeProfile(name); return { name:name, mic:!!mic, tag:tag||null, gender: genderOf(name, gender), hue: Math.floor(rand(0,360)), grant: grant||null, grantedBy: grantedBy||null, chatBanned:false, micBanned:false, loginId: name, code: fp.code, points: fp.points, daily: fp.daily, level: fp.level }; }
       /* PHÂN QUYỀN MỚI (làm lại theo yêu cầu):
          - Áo ĐỎ = QTV (rank 0) — cấp cao nhất hệ thống, toàn quyền: cấm chat /
            khóa mic / cấp áo / xóa xếp hàng được MỌI cấp, kể cả BĐH.
@@ -1856,10 +2364,10 @@
             micUp = '<button class="mic-up-btn'+(m.micBanned?" banned":"")+'" type="button" data-micup="'+esc(m.name)+'" data-micup-room="'+roomId+'" title="'+(m.micBanned ? esc(m.name)+" đang bị khóa mic — không thêm vào xếp hàng được" : "QTV / BĐH: bấm để thêm "+esc(m.name)+" vào danh sách xếp hàng chờ lên mic")+'" aria-label="Thêm '+esc(m.name)+' vào danh sách xếp hàng">'+micUpSVG+"</button>";
           }
         }
-        return '<div class="'+cls+'" data-member="'+esc(m.name)+'" data-mroom="'+roomId+'" title="Bấm để xem / đổi tên và giới tính của ' + esc(m.name) + '">'
+        return '<div class="'+cls+'" data-member="'+esc(m.name)+'" data-mroom="'+roomId+'" title="Thẻ hồ sơ của ' + esc(m.name) + ' — rê chuột để xem nhanh, bấm để mở chi tiết">'
           + genderHTML(m.gender, tile)
           + '<span class="mic'+(micOn?" on":"")+'">'+(micOn?micSVG:micOffSVG)+"</span>"
-          + '<span class="mname">'+esc(m.name)+(m.me?" (Bạn)":"")+"</span>"
+          + '<span class="mname"><span class="mname-text">'+esc(m.name)+(m.me?" (Bạn)":"")+'</span><span class="lv-badge" title="Cấp bậc '+profileOfMember(m).level+' — '+profileOfMember(m).points+' điểm thành viên">Lv '+profileOfMember(m).level+"</span></span>"
           + '<span class="tagzone">'+tag+"</span>" + micUp + "</div>";
       }
       function sortedMembers(members){
@@ -1895,7 +2403,12 @@
         $("roomList").innerHTML = html || '<div style="padding:1rem;color:var(--muted);font-size:.9rem;">Không tìm thấy phòng hoặc người nào khớp.</div>';
         $("roomList").querySelectorAll("[data-enter]").forEach(function(btn){ btn.addEventListener("click", function(){ enterRoom(btn.getAttribute("data-enter")); }); });
         $("roomList").querySelectorAll("[data-edit]").forEach(function(btn){ btn.addEventListener("click", function(e){ e.stopPropagation(); openRoomModal(btn.getAttribute("data-edit")); }); });
-        $("roomList").querySelectorAll("[data-member]").forEach(function(el){ el.addEventListener("click", function(){ openMemberModal(el.getAttribute("data-mroom"), el.getAttribute("data-member")); }); });
+        $("roomList").querySelectorAll("[data-member]").forEach(function(el){ el.addEventListener("click", function(){ hideProfileCard(); openMemberModal(el.getAttribute("data-mroom"), el.getAttribute("data-member")); }); });
+        /* Rê chuột vào tên: hiện thẻ hồ sơ nổi (mẫu ccTalk cũ) cạnh hàng đó */
+        $("roomList").querySelectorAll("[data-member]").forEach(function(el){
+          el.addEventListener("mouseenter", function(){ showProfileCard(el.getAttribute("data-mroom"), el.getAttribute("data-member"), el); });
+          el.addEventListener("mouseleave", hideProfileCard);
+        });
         $("roomList").querySelectorAll("[data-micup]").forEach(function(btn){ btn.addEventListener("click", function(e){ e.stopPropagation(); var rr = roomById(btn.getAttribute("data-micup-room")); if(rr && addUserToQueue(rr, btn.getAttribute("data-micup"), true)) renderRoomList(); }); });
         var cur = currentRoom();
         var canCreate = cur ? canCreateRoomInRoom(cur) : isAdmin();
@@ -1913,8 +2426,12 @@
           return "";
         }
         if(m.type==="announce"){
-          return '<div class="announce"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10v4a1 1 0 0 0 1 1h2l4 4.5c.8.9 2 .3 2-.9V5.3c0-1.2-1.2-1.8-2-.9L6 9H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg><span>'+esc(m.text)+"</span></div>";
+          return '<div class="announce'+(m.awarded?" awarded":"")+'"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10v4a1 1 0 0 0 1 1h2l4 4.5c.8.9 2 .3 2-.9V5.3c0-1.2-1.2-1.8-2-.9L6 9H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg><span>'+esc(m.text)+"</span></div>";
         }
+        /* Tin có style riêng (màu + cỡ chữ người gửi chọn): hiển thị đúng
+           style đó cho mọi người; không có style thì dùng màu lớp cũ */
+        var stAttr = m.style ? msgTextStyleAttr(m.style) : "";
+        if(stAttr) return '<div class="msg'+(m.me?" me":"")+'"><span class="who"><b>'+esc(m.name)+"</b>"+(m.bot?' <span class="tag-bot">BOT</span>':"")+" "+esc(m.time)+'</span><br/><span class="text"'+stAttr+'>'+esc(m.text)+"</span></div>";
         return '<div class="msg'+(m.me?" me":"")+'"><span class="who"><b>'+esc(m.name)+"</b>"+(m.bot?' <span class="tag-bot">BOT</span>':"")+" "+esc(m.time)+'</span><br/><span class="text '+(m.cls||"c-plain")+'">'+esc(m.text)+"</span></div>";
       }
       function renderMessages(){
@@ -1948,15 +2465,13 @@
       /* ================= Online count ================= */
       function totalMembers(){ return rooms.reduce(function(s,r){ return s + r.members.length; }, 0); }
       function updateOnline(){
-        /* Chế độ máy chủ thật: hiện đúng số người (thật + bot máy chủ)
-           đang online trong sảnh hiện tại, không dùng số mô phỏng nữa */
-        if(typeof hubActive === "function" && hubActive()){
-          var hr = currentRoom();
-          $("onlineCount").textContent = hr ? hr.members.length : 0;
-          return;
-        }
-        var drift = Math.round(Math.sin(Date.now()/60000)*9 + rand(-3,3));
-        $("onlineCount").textContent = 118 + totalMembers() + drift;
+        /* Số Online trên tiêu đề = đúng số người của sảnh ĐANG Ở, lấy qua
+           roomDisplayCount như số cạnh phòng ở cột trái — và danh sách
+           thành viên của sảnh đó cũng vẽ đúng bấy nhiêu dòng, nên 3 con
+           số luôn bằng nhau ở cả chế độ máy chủ lẫn demo (bản cũ ở demo
+           cộng thêm số mô phỏng 118 + nhiễu nên 3 nơi lệch nhau) */
+        var hr = currentRoom();
+        $("onlineCount").textContent = hr ? roomDisplayCount(hr) : 0;
       }
 
       /* ================= Enter room ================= */
@@ -1982,7 +2497,7 @@
         var prevMe = null;
         rooms.forEach(function(r){ r.members.forEach(function(m){ if(m.me) prevMe = m; }); });
         rooms.forEach(function(r){ r.members = r.members.filter(function(m){ return !m.me; }); });
-        if(state.user){ roomById(roomId).members.unshift({ name: state.user, mic:true, tag: isAdmin() ? "QTV" : (state.memberTag || null), gender: state.gender, hue: state.hue, me:true, grant: state.grant || null, grantedBy: prevMe ? (prevMe.grantedBy || null) : null, chatBanned: prevMe ? !!prevMe.chatBanned : false, micBanned: prevMe ? !!prevMe.micBanned : false }); }
+        if(state.user){ var mp = myProfile(); roomById(roomId).members.unshift({ name: state.user, mic:true, tag: isAdmin() ? "QTV" : (state.memberTag || null), gender: state.gender, hue: state.hue, me:true, grant: state.grant || null, grantedBy: prevMe ? (prevMe.grantedBy || null) : null, chatBanned: prevMe ? !!prevMe.chatBanned : false, micBanned: prevMe ? !!prevMe.micBanned : false, srvId: state.userId || null, loginId: state.userId || null, code: mp.code, points: mp.points, daily: mp.daily, level: mp.level }); }
       }
       function enterRoom(roomId){
         var r = roomById(roomId); if(!r) return;
@@ -2037,12 +2552,23 @@
         state.memberTag = acc.memberTag || null;
         state.grant = acc.grant || null;
         state.gender = acc.gender || "M";
+        /* Hồ sơ của mình (mã số / điểm / cấp bậc): máy chủ trả thì dùng
+           số thật của máy chủ, chưa có thì giữ số đã lưu / giả lập demo */
+        if(acc.code) state.myCode = acc.code;
+        if(acc.points != null) state.myPoints = acc.points;
+        if(acc.daily != null) state.myDaily = acc.daily;
+        if(authProfile){
+          if(acc.code) authProfile.code = acc.code;
+          if(acc.points != null) authProfile.points = acc.points;
+          if(acc.daily != null) authProfile.daily = acc.daily;
+        }
         audio(); sfx("ding");
         $("loginOverlay").classList.add("hidden");
         $("userChip").classList.add("show");
         $("userAva").style.background = "hsl("+acc.hue+",62%,46%)";
         $("userAva").textContent = acc.name.trim().charAt(0).toUpperCase();
         $("userChipName").textContent = acc.name + " (" + acc.id + ")";
+        updateUserChipMeta();
         var badge = $("userRoleBadge");
         badge.textContent = isAdmin() ? "QTV" : (state.memberTag==="BĐH" ? (state.grant==="yellow" ? "BĐH · VÀNG" : state.grant==="purple" ? "BĐH · TÍM" : "BĐH") : "THÀNH VIÊN");
         badge.classList.toggle("user", !isAdmin());
@@ -2132,8 +2658,11 @@
           if(r.ok && r.data && r.data.session){
             formError($("loginError"), "");
             $("loginPass").value = "";
-            saveAuthSession(r.data.session, { id: r.data.id, name: r.data.name, rank: r.data.rank });
+            saveAuthSession(r.data.session, profileFromServerData(r.data));
             enterAs(accFromServer(r.data));
+          } else if(r.status === 503 || (r.data && r.data.error === "maintenance")){
+            /* Máy chủ đang bảo trì: hiện màn hình chờ thay cho lỗi đỏ */
+            maintShow((r.data && r.data.message) || null);
           } else {
             /* Hiện đúng thông báo lỗi máy chủ trả về (sai ID/mật khẩu,
                bị khóa tạm vì sai nhiều lần...) */
@@ -2141,7 +2670,9 @@
           }
         }).catch(function(){
           setAuthBusy(false, "login");
-          formError($("loginError"), "Không gọi được máy chủ đăng nhập tại " + base + " — máy chủ chưa chạy, sai địa chỉ, hoặc kết nối bị chặn (CORS). Kiểm tra lại địa chỉ rồi thử lại.");
+          /* Không gọi được máy chủ (đang tắt / đang ngủ / đang update):
+             hiện màn hình chờ bảo trì toàn màn hình thay cho lỗi đỏ */
+          maintShow();
         });
       });
       $("registerForm").addEventListener("submit", function(e){
@@ -2161,21 +2692,24 @@
         setAuthBusy(true, "reg");
         /* Đăng ký ở máy chủ chỉ tạo THÀNH VIÊN THƯỜNG — máy chủ cấp luôn
            session để vào phòng ngay, không cần đăng nhập lại. */
-        authFetch("/register", { method: "POST", body: { id: id, password: pass, name: name } }).then(function(r){
+        authFetch("/register", { method: "POST", body: { id: id, password: pass, name: name, gender: gender === "F" ? "female" : "male" } }).then(function(r){
           setAuthBusy(false, "reg");
           if((r.status === 200 || r.status === 201) && r.data && r.data.session){
             formError($("regError"), "");
             $("regPass").value = ""; $("regPass2").value = "";
             saveGenderFor(r.data.id, gender);
-            saveAuthSession(r.data.session, { id: r.data.id, name: r.data.name, rank: r.data.rank });
+            saveAuthSession(r.data.session, profileFromServerData(r.data));
             toast("Đăng ký thành công ID \"" + r.data.id + "\" — đang vào phòng...");
             enterAs(accFromServer(r.data, gender));
+          } else if(r.status === 503 || (r.data && r.data.error === "maintenance")){
+            maintShow((r.data && r.data.message) || null);
           } else {
             formError($("regError"), (r.data && r.data.error) || ("Máy chủ đăng ký trả lỗi HTTP " + r.status + " — thử lại sau."));
           }
         }).catch(function(){
           setAuthBusy(false, "reg");
-          formError($("regError"), "Không gọi được máy chủ đăng nhập tại " + base + " — máy chủ chưa chạy, sai địa chỉ, hoặc kết nối bị chặn (CORS). Kiểm tra lại địa chỉ rồi thử lại.");
+          /* Không gọi được máy chủ: hiện màn hình chờ bảo trì thay lỗi đỏ */
+          maintShow();
         });
       });
 
@@ -2408,6 +2942,24 @@
         var hint = $("mmModHint");
         if(hint) hint.textContent = "Phân quyền: QTV đỏ (cao nhất) > BĐH đen > BĐH vàng > BĐH tím > thành viên thường. Bạn là " + rankName(viewerRankInRoom(r)) + " — chỉ cấm chat / khóa mic được người đứng dưới cấp của mình: đỏ cấm được tất cả, đen không cấm được đỏ, vàng không cấm được đỏ + đen, tím không cấm được đỏ + đen + vàng. Thêm vào xếp hàng thì QTV và mọi BĐH đều làm được.";
       }
+      /* Thẻ hồ sơ nổi: hiện cạnh hàng thành viên khi rê chuột (desktop);
+         trên điện thoại thì bấm vào tên mở cửa sổ thành viên — trong đó
+         cũng có nguyên thẻ hồ sơ này ở trên cùng */
+      function showProfileCard(roomId, name, anchorEl){
+        var r = roomById(roomId); if(!r || !anchorEl) return;
+        var m = r.members.filter(function(x){ return x.name===name; })[0]; if(!m) return;
+        var card = $("profileCard"); if(!card) return;
+        card.innerHTML = profileCardHTML(m);
+        card.classList.add("show");
+        var rc = anchorEl.getBoundingClientRect();
+        var w = Math.min(290, window.innerWidth * 0.88);
+        var left = Math.min(rc.left + 14, window.innerWidth - w - 8);
+        var top = rc.bottom + 6;
+        if(top + 190 > window.innerHeight) top = Math.max(8, rc.top - 196);
+        card.style.left = Math.max(8, left) + "px";
+        card.style.top = top + "px";
+      }
+      function hideProfileCard(){ var card = $("profileCard"); if(card) card.classList.remove("show"); }
       function openMemberModal(roomId, name){
         var r = roomById(roomId); if(!r) return;
         var m = r.members.filter(function(x){ return x.name===name; })[0]; if(!m) return;
@@ -2419,6 +2971,26 @@
         /* Khung quản lý hiện khi cấm / khóa được HOẶC thêm vào xếp hàng được */
         var showMod = canMod || (isManagerInRoom(r) && !m.me);
         editingMemberRef = { roomId: roomId, member: m, canEdit: canEdit, canGrant: canGrant, canMod: canMod, canAddQ: canAddQ, showMod: showMod };
+        /* Thẻ hồ sơ (mẫu ccTalk cũ) ở trên cùng cửa sổ thành viên */
+        var pc = $("mmProfile"); if(pc) pc.innerHTML = profileCardHTML(m);
+        /* Thưởng điểm: chỉ áo đỏ (QTV, 1–100/lần) và áo đen (BĐH, 1–50/lần,
+           chỉ người dưới cấp mình); không tự thưởng mình; BOT máy chủ
+           không có tài khoản thật nên không thưởng được */
+        var vrA = viewerRankInRoom(r);
+        var canAward = false, awardMax = 0;
+        if(!m.me && !(hubActive() && m.bot)){
+          if(vrA === 0){ canAward = true; awardMax = 100; }
+          else if(vrA === 1 && rankOf(m) > 1){ canAward = true; awardMax = 50; }
+        }
+        editingMemberRef.canAward = canAward;
+        editingMemberRef.awardMax = awardMax;
+        var aw = $("mmAwardWrap"); if(aw) aw.style.display = canAward ? "" : "none";
+        if(canAward){
+          var amt = $("mmAwardAmt"); if(amt){ amt.max = String(awardMax); if((parseInt(amt.value, 10) || 0) > awardMax) amt.value = String(awardMax); }
+          var ah = $("mmAwardHint"); if(ah) ah.textContent = vrA === 0
+            ? "Bạn là QTV (áo đỏ): thưởng 1–" + awardMax + " điểm/lần, tối đa 1.000 điểm/ngày. Điểm cộng thẳng vào điểm thành viên + điểm tích lũy hôm nay của " + m.name + "."
+            : "Bạn là BĐH (áo đen): thưởng 1–" + awardMax + " điểm/lần cho người dưới cấp mình, tối đa 300 điểm/ngày. Điểm cộng thẳng vào điểm thành viên + điểm tích lũy hôm nay của " + m.name + ".";
+        }
         $("mmTitle").textContent = "Thành viên: " + m.name;
         $("mmDesc").textContent = "Vai trò hiện tại: " + memberRoleLabel(m) + "."
           + (canEdit ? "" : " Chỉ QTV hoặc chính người đó mới đổi được tên và giới tính.")
@@ -2488,6 +3060,37 @@
         if(!isManagerInRoom(r)){ toast("Chỉ QTV và BĐH mới thêm user vào xếp hàng được"); return; }
         addUserToQueue(r, m.name, true);
         refreshModButtons();
+      });
+      $("mmAwardBtn").addEventListener("click", function(){
+        if(!editingMemberRef || !editingMemberRef.canAward) return;
+        var r = roomById(editingMemberRef.roomId); var m = editingMemberRef.member; if(!r || !m) return;
+        var max = editingMemberRef.awardMax || 0;
+        var amt = parseInt($("mmAwardAmt").value, 10);
+        if(isNaN(amt) || amt < 1 || amt > max){ formError($("mmError"), "Số điểm thưởng phải từ 1 đến " + max + " điểm mỗi lần."); sfx("error"); return; }
+        formError($("mmError"), "");
+        if(hubActive()){
+          /* Chế độ máy chủ: gửi {type:'award', userId, amount} — máy chủ
+             kiểm tra quyền + hạn mức ngày, cộng điểm rồi phát 'points' và
+             'awarded' cho cả phòng; lỗi máy chủ (forbidden / bad-amount /
+             bad-user / award-limit) hiện qua hubOnMessage */
+          if(!m.srvId){ formError($("mmError"), "Người này không có tài khoản trên máy chủ nên không thưởng điểm được."); return; }
+          if(hubSend({ type: "award", userId: m.srvId, amount: amt })){
+            toast("Đã gửi thưởng " + amt + " điểm cho " + m.name + " — chờ máy chủ xác nhận");
+            closeMemberModal();
+          } else {
+            formError($("mmError"), "Chưa nối được máy chủ chat — chờ vài giây rồi thử lại.");
+          }
+          return;
+        }
+        /* Chế độ demo: cộng điểm ngay tại máy này + thông báo vàng trong chat */
+        m.points = (parseInt(m.points, 10) || 0) + amt;
+        m.daily = (parseInt(m.daily, 10) || 0) + amt;
+        m.level = levelOfPoints(m.points);
+        var pc2 = $("mmProfile"); if(pc2) pc2.innerHTML = profileCardHTML(m);
+        addMessage(state.roomId, { type: "announce", awarded: true, text: "🏆 " + state.user + " đã thưởng " + amt + " điểm cho " + m.name + "!" });
+        toast("Đã thưởng " + amt + " điểm cho " + m.name + " (chế độ demo — điểm chỉ lưu trên máy này)");
+        sfx("ding");
+        renderRoomList();
       });
       $("mmSave").addEventListener("click", function(){
         if(!editingMemberRef) return;
@@ -2630,6 +3233,27 @@
         r.stage.likes++;
         var l = $("stageLikes"); if(l) l.textContent = r.stage.likes;
         spawnHearts(fromBot ? 1 : 3);
+        /* Chỉ lượt bấm Thả tim THẬT của user mới tính là 1 vote (+1 điểm
+           cho người đang trên mic) — tim bot tự bay không tính */
+        if(!fromBot) castVote(r);
+      }
+      /* Vote cho người đang trên mic: chế độ máy chủ gửi {type:'vote',
+         room, userId} — máy chủ kiểm tra (người thật, không phải mình /
+         bot, cooldown 5s, tối đa 60 vote/giờ) rồi cộng +1 điểm và phát
+         'points' về. Chế độ demo: cộng +1 điểm ngay tại máy này. */
+      function castVote(r){
+        if(!r || !r.stage || !state.user) return;
+        var target = r.members.filter(function(x){ return x.name === r.stage.name; })[0];
+        if(hubActive()){
+          if(target && target.srvId && !target.bot && target.srvId !== state.userId) hubSend({ type: "vote", room: r.id, userId: target.srvId });
+          return;
+        }
+        if(target && !target.me){
+          target.points = (parseInt(target.points, 10) || 0) + 1;
+          target.daily = (parseInt(target.daily, 10) || 0) + 1;
+          target.level = levelOfPoints(target.points);
+          renderRoomList();
+        }
       }
       function bindHeartBtn(){
         var b = $("heartBtn"); if(!b) return;
@@ -2904,7 +3528,7 @@
            mới hiện trong khung chat (không tự hiện tin của mình trước)
            để mọi máy thấy giống hệt nhau */
         if(hubActive()){
-          if(hubSend({ type:"message", room: state.roomId, text: text })){
+          if(hubSend({ type:"message", room: state.roomId, text: text, style: { color: chatStyle.color, size: chatStyle.size } })){
             state.lastCommentAt[state.roomId] = Date.now();
             inp.value = "";
             sfx("send");
@@ -2914,7 +3538,7 @@
           }
           return;
         }
-        addMessage(state.roomId, {type:"msg", name: state.user, text:text, cls:"c-plain", time: timeNow(), me:true}, {sound:"send"});
+        addMessage(state.roomId, {type:"msg", name: state.user, text:text, cls:"c-plain", style: { color: chatStyle.color, size: chatStyle.size }, time: timeNow(), me:true}, {sound:"send"});
         state.lastCommentAt[state.roomId] = Date.now();
         inp.value = "";
         if(Math.random() < 0.55){
@@ -2946,6 +3570,43 @@
       })();
       $("emojiBtn").addEventListener("click", function(e){ e.stopPropagation(); $("emojiPop").classList.toggle("show"); });
       document.addEventListener("click", function(e){ if(!$("emojiPop").contains(e.target)) $("emojiPop").classList.remove("show"); });
+
+      /* Bảng chọn màu chữ + cỡ chữ (nút Aa): 12 màu whitelist + 5 cỡ
+         12–20 theo SPEC v3.5; lựa chọn lưu trên máy này và gửi kèm mỗi
+         tin nhắn (style) để mọi máy thấy đúng màu/cỡ của người gửi */
+      (function buildStylePicker(){
+        var sw = $("styleSwatches"), sz = $("styleSizes");
+        if(!sw || !sz) return;
+        function paint(){
+          sw.querySelectorAll(".swatch").forEach(function(b){ b.classList.toggle("sel", b.getAttribute("data-color") === chatStyle.color); });
+          sz.querySelectorAll(".size-btn").forEach(function(b){ b.classList.toggle("sel", parseInt(b.getAttribute("data-size"), 10) === chatStyle.size); });
+          var btn = $("styleBtn"); if(btn) btn.classList.toggle("sel", chatStyle.color !== "#1f2937" || chatStyle.size !== 14);
+        }
+        CHAT_COLORS.forEach(function(c){
+          var b = document.createElement("button");
+          b.type = "button"; b.className = "swatch"; b.style.background = c; b.setAttribute("data-color", c);
+          b.title = "Màu chữ " + c; b.setAttribute("aria-label", "Chọn màu chữ " + c);
+          b.addEventListener("click", function(){ chatStyle.color = c; saveChatStyle(); paint(); $("chatInput").focus(); });
+          sw.appendChild(b);
+        });
+        CHAT_SIZES.forEach(function(s){
+          var b = document.createElement("button");
+          b.type = "button"; b.className = "size-btn"; b.textContent = s; b.style.fontSize = Math.min(s, 18) + "px"; b.setAttribute("data-size", String(s));
+          b.title = "Cỡ chữ " + s; b.setAttribute("aria-label", "Chọn cỡ chữ " + s);
+          b.addEventListener("click", function(){ chatStyle.size = s; saveChatStyle(); paint(); $("chatInput").focus(); });
+          sz.appendChild(b);
+        });
+        paint();
+        $("styleBtn").addEventListener("click", function(e){
+          e.stopPropagation();
+          $("emojiPop").classList.remove("show");
+          $("stylePop").classList.toggle("show");
+        });
+        document.addEventListener("click", function(e){
+          var pop = $("stylePop");
+          if(pop && !pop.contains(e.target) && e.target !== $("styleBtn")) pop.classList.remove("show");
+        });
+      })();
 
       /* ================= Bot simulation ================= */
       function botChatTick(){
@@ -3088,17 +3749,30 @@
         micSetStatus("🎤 Đang xin quyền dùng mic… hãy bấm Cho phép (Allow) khi trình duyệt hỏi.", "");
         navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true } })
           .then(function(stream){
-            voice.stream = stream; voice.perm = "granted";
+            voice.rawStream = stream; voice.perm = "granted";
+            /* Chuỗi âm thanh: mic thật -> GainNode (âm lượng mic 0–200%)
+               -> bộ phân tích (đồng hồ mức đo SAU gain) + -> đầu ra là
+               stream đã qua gain: chính stream này được phát lên PeerJS /
+               LiveKit nên người khác nghe đúng mức âm lượng đã chỉnh.
+               Không dựng được Web Audio thì dùng thẳng stream gốc. */
+            voice.stream = stream;
             try{
               var ac = audio();
               if(ac){
                 var srcNode = ac.createMediaStreamSource(stream);
+                voice.srcNode = srcNode;
+                voice.gainNode = ac.createGain();
+                voice.gainNode.gain.value = micGainVal;
+                srcNode.connect(voice.gainNode);
                 voice.analyser = ac.createAnalyser();
                 voice.analyser.fftSize = 512;
                 voice.dataArr = new Uint8Array(voice.analyser.fftSize);
-                srcNode.connect(voice.analyser);
+                voice.gainNode.connect(voice.analyser);
+                var dest = ac.createMediaStreamDestination();
+                voice.gainNode.connect(dest);
+                voice.stream = dest.stream;
               }
-            }catch(e){ voice.analyser = null; }
+            }catch(e){ voice.analyser = null; voice.gainNode = null; voice.stream = stream; }
             var isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || "");
             micSetStatus("🎤 Mic đã sẵn sàng — đang dùng mic của " + (isMobile ? "điện thoại" : "máy tính") + " của bạn.", "ok");
             startLevelMeter();
@@ -4404,7 +5078,34 @@
       })();
 
       /* ================= Voice bar controls ================= */
-      $("volSlider").addEventListener("input", function(e){ masterVol = e.target.value/100; });
+      /* Âm lượng LOA (0–100%): áp ngay cho toàn bộ tiếng người khác đang
+         phát qua LiveKit + PeerJS; tiếng phát sau cũng dùng mức này vì
+         mọi thẻ audio mới đều lấy volume = masterVol lúc tạo */
+      function applySpeakerVol(){
+        masterVol = speakerVolVal;
+        var vv = $("volVal"); if(vv) vv.textContent = Math.round(speakerVolVal * 100) + "%";
+        if(lk.audioBox) lk.audioBox.querySelectorAll("audio").forEach(function(el){ el.volume = masterVol; });
+        if(typeof pj !== "undefined" && pj.audioBox) pj.audioBox.querySelectorAll("audio").forEach(function(el){ el.volume = masterVol; });
+      }
+      (function initVolControls(){
+        var vs = $("volSlider"), ms = $("micGainSlider");
+        if(vs){ vs.value = String(Math.round(speakerVolVal * 100)); }
+        if(ms){ ms.value = String(Math.round(micGainVal * 100)); var mv = $("micGainVal"); if(mv) mv.textContent = Math.round(micGainVal * 100) + "%"; }
+        applySpeakerVol();
+        if(vs) vs.addEventListener("input", function(e){
+          speakerVolVal = (parseInt(e.target.value, 10) || 0) / 100;
+          try{ localStorage.setItem("cctalk.speakerVol", String(speakerVolVal)); }catch(err){}
+          applySpeakerVol();
+        });
+        /* Âm lượng MIC (0–200%): chỉnh GainNode trực tiếp — tiếng phát
+           lên PeerJS / LiveKit và đồng hồ mức mic đều qua gain này */
+        if(ms) ms.addEventListener("input", function(e){
+          micGainVal = (parseInt(e.target.value, 10) || 0) / 100;
+          var mv2 = $("micGainVal"); if(mv2) mv2.textContent = Math.round(micGainVal * 100) + "%";
+          try{ localStorage.setItem("cctalk.micGain", String(micGainVal)); }catch(err){}
+          if(voice.gainNode){ try{ voice.gainNode.gain.value = micGainVal; }catch(err){} }
+        });
+      })();
       $("musicBtn").addEventListener("click", function(){
         var p = $("musicPanel");
         var show = p.classList.toggle("show");
@@ -4648,7 +5349,8 @@
         pjDisconnect(true);
         if(voice.stream){
           voice.stream.getTracks().forEach(function(t){ try{ t.stop(); }catch(e){} });
-          voice.stream = null; voice.analyser = null; voice.perm = "unknown";
+          if(voice.rawStream){ voice.rawStream.getTracks().forEach(function(t){ try{ t.stop(); }catch(e){} }); voice.rawStream = null; }
+          voice.stream = null; voice.analyser = null; voice.gainNode = null; voice.srcNode = null; voice.perm = "unknown";
           if(voice.raf){ cancelAnimationFrame(voice.raf); voice.raf = 0; }
           var mf0 = $("micLevelFill"); if(mf0) mf0.style.width = "0%";
           micSetStatus("🎤 Mic: chưa bật — lần đầu bấm nói, trình duyệt sẽ hỏi quyền dùng mic của điện thoại / máy tính, hãy bấm Cho phép (Allow).", "");
@@ -5527,6 +6229,23 @@
         toast("Đã đóng vòng — BĐH chọn cách kinh rồi bấm Tạo vòng lô tô để mở vòng mới cho cả phòng");
       });
 
+      /* Màn hình chờ bảo trì: nút Thử lại ngay kiểm tra /health tức thì;
+         nút Vào chế độ demo tắt màn chờ và ở lại chế độ bot demo offline */
+      $("maintRetryBtn").addEventListener("click", function(){ maint.nextAt = Date.now() + 15000; maintCheck(true); });
+      $("maintDemoBtn").addEventListener("click", function(){
+        maint.suppressed = true;
+        maintHide();
+        maint.suppressed = true;
+        if(!state.user){
+          /* Chưa đăng nhập được: đưa về màn đăng nhập (vẫn xem được giao
+             diện phòng demo phía sau) — đăng nhập cần máy chủ, demo chỉ
+             để xem thử nên không ép đăng nhập */
+          toast("Đang ở chế độ xem thử demo — máy chủ sẵn sàng thì bấm Thử lại ở lần mở sau hoặc tải lại trang để đăng nhập");
+        } else {
+          toast("Đang ở chế độ demo offline — mỗi máy một phòng riêng");
+        }
+      });
+
       /* Init */
       renderRoomHeader();
       renderRoomList();
@@ -5542,13 +6261,20 @@
         authFetch("/me").then(function(r){
           if(state.user) return;
           if(r.ok && r.data && r.data.id){
-            saveAuthSession(authSession, { id: r.data.id, name: r.data.name, rank: r.data.rank });
+            saveAuthSession(authSession, profileFromServerData(r.data));
             enterAs(accFromServer(r.data));
           } else if(r.status === 401){
             clearAuthSession();
             formError($("loginError"), "Phiên đăng nhập đã hết hạn — đăng nhập lại để vào phòng.");
+          } else if(r.status === 503){
+            maintShow((r.data && r.data.message) || null);
           }
-        }).catch(function(){ /* máy chủ chưa chạy tới — ở lại màn hình đăng nhập */ });
+        }).catch(function(){ /* máy chủ chưa chạy tới — hiện màn hình chờ bảo trì, session vẫn giữ để tự vào lại khi máy chủ khỏe */ maintShow(); });
+      } else if(authServer){
+        /* Chưa có session: cũng kiểm tra /health ngay khi mở trang —
+           máy chủ đang tắt / bảo trì thì hiện màn hình chờ thay vì để
+           user bấm đăng nhập rồi mới gặp lỗi */
+        maintCheck(false);
       }
     })();
     </script>

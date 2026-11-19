@@ -59,6 +59,69 @@ export function setUserRank(users, id, rank) {
   return true;
 }
 
+// ---- Mã số + điểm + cấp bậc (v3.5) ---------------------------------------
+// Mỗi tài khoản có: code (mã số 9 chữ số ngẫu nhiên, duy nhất, chữ số đầu
+// 1-9), points (điểm thành viên — tổng cả quá trình), daily ({date, points}
+// — điểm tích lũy trong ngày theo giờ Asia/Saigon, tự về 0 khi sang ngày
+// mới), onlineMs (thời gian online cộng dồn chưa đủ 1 giờ). Cấp bậc (level)
+// tính từ points, không lưu: min(100, 1 + floor(points / 40)).
+export const TITLES = {
+  qtv: 'Quản trị viên phòng chính',
+  'bdh-den': 'Ban điều hành (áo đen)',
+  'bdh-vang': 'Ban điều hành (áo vàng)',
+  'bdh-tim': 'Ban điều hành (áo tím)',
+  member: 'Thành viên',
+};
+
+// Ngày hiện tại theo giờ Việt Nam (UTC+7, không có giờ mùa hè).
+export function todayVN(now = Date.now()) {
+  return new Date(now + 7 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+export function levelOf(points) {
+  return Math.min(100, 1 + Math.floor(Math.max(0, Number(points) || 0) / 40));
+}
+
+// Mã số 9 chữ số, chữ số đầu 1-9, không trùng với mã đã có (kể cả mã bot).
+export function genCode(users, taken = new Set()) {
+  const used = new Set(taken);
+  for (const u of Object.values(users)) if (u && u.code) used.add(String(u.code));
+  for (;;) {
+    const code = String(crypto.randomInt(100000000, 1000000000));
+    if (!used.has(code)) return code;
+  }
+}
+
+// Điểm hôm nay (reset lười: daily.date khác ngày hôm nay -> 0).
+export function dailyOf(u) {
+  if (!u || !u.daily || u.daily.date !== todayVN()) return 0;
+  return Number(u.daily.points) || 0;
+}
+
+// Cộng điểm vào cả points (tổng) và daily (hôm nay).
+export function addPoints(u, amount) {
+  const n = Math.max(0, Math.floor(Number(amount) || 0));
+  if (!u || !n) return false;
+  const today = todayVN();
+  if (!u.daily || u.daily.date !== today) u.daily = { date: today, points: 0 };
+  u.points = (Number(u.points) || 0) + n;
+  u.daily.points = (Number(u.daily.points) || 0) + n;
+  return true;
+}
+
+// Bù các trường v3.5 cho tài khoản cũ. Trả về true nếu có thay đổi (cần lưu).
+export function ensureUserFields(users, taken = new Set()) {
+  let changed = false;
+  for (const u of Object.values(users)) {
+    if (!u || typeof u !== 'object') continue;
+    if (!u.code || !/^[1-9][0-9]{8}$/.test(String(u.code))) { u.code = genCode(users, taken); changed = true; }
+    if (!Number.isInteger(u.points) || u.points < 0) { u.points = Math.max(0, Math.floor(Number(u.points) || 0)); changed = true; }
+    if (!u.daily || typeof u.daily !== 'object') { u.daily = { date: todayVN(), points: 0 }; changed = true; }
+    if (!Number.isFinite(u.onlineMs) || u.onlineMs < 0) { u.onlineMs = 0; changed = true; }
+  }
+  return changed;
+}
+
 // Gieo tài khoản demo từ biến môi trường — CHỈ chạy khi chưa có file users
 // (lần khởi động đầu tiên). Mật khẩu lấy từ biến môi trường, không có giá
 // trị mặc định nào ghi cứng trong code.
@@ -80,7 +143,10 @@ export function seedFromEnv(users) {
   const added = [];
   for (const [id, password, name, rank] of seeds) {
     if (!users[id]) {
-      users[id] = { name, rank, passwordHash: hashPassword(password), createdAt: new Date().toISOString() };
+      users[id] = {
+        name, rank, passwordHash: hashPassword(password), createdAt: new Date().toISOString(),
+        code: genCode(users), points: 0, daily: { date: todayVN(), points: 0 }, onlineMs: 0,
+      };
       added.push(id);
     }
   }

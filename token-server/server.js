@@ -32,6 +32,13 @@
 // V3.4: cấp áo BĐH đồng bộ qua hub (set-rank, lưu kho tài khoản, phát
 // rank-changed + presence cho mọi máy), phát số người/phòng (room-counts)
 // cho mọi máy khi có người vào/ra/tạo/xóa phòng; bot 35 -> 10/phòng.
+// V3.5: mã số 9 chữ số ngẫu nhiên cho mọi tài khoản, điểm thành viên (tổng)
+// + điểm tích lũy hôm nay + cấp bậc (level); hồ sơ (profile) có trong
+// /login, /register, /me, auth-ok, presence, room-state. Cộng điểm: online
+// đủ 1 giờ +10 (QTV +15, BĐH đen +12), mỗi vote/thả tim +1; QTV + BĐH đen
+// thưởng điểm (award) có hạn mức ngày. Màu + cỡ chữ chat (style, whitelist).
+// Chế độ bảo trì MAINTENANCE=1. Ping/pong 30s dọn socket chết để số người
+// mỗi phòng luôn khớp thực tế.
 
 import http from 'node:http';
 import crypto from 'node:crypto';
@@ -40,7 +47,28 @@ import { WebSocketServer } from 'ws';
 import {
   loadUsers, saveUsers, usersFileExists, seedFromEnv,
   hashPassword, verifyPassword, validId, RANKS, MANAGER_RANKS, setUserRank,
+  TITLES, todayVN, levelOf, genCode, dailyOf, addPoints, ensureUserFields,
 } from './users.js';
+
+// ---- Bảo trì + tham số điểm (v3.5) ----------------------------------------
+// MAINTENANCE=1: /health vẫn 200 nhưng báo maintenance:true; /login,
+// /register, /token trả 503 {error:'maintenance', message}; /ws đóng mã 4503.
+const MAINTENANCE = ['1', 'true', 'yes', 'on'].includes(String(process.env.MAINTENANCE || '').toLowerCase());
+const MAINTENANCE_MESSAGE = String(process.env.MAINTENANCE_MESSAGE || 'Hệ thống đang bảo trì / cập nhật, vui lòng quay lại sau ít phút.').slice(0, 300);
+// 1 "giờ online" (ms) — mặc định 3.600.000; test có thể rút ngắn bằng env.
+const ONLINE_POINT_MS = Math.max(200, Number(process.env.ONLINE_POINT_MS) || 3_600_000);
+// Chu kỳ quét online: 60 giây (rút theo ONLINE_POINT_MS khi test).
+const ONLINE_TICK_MS = Math.min(60_000, Math.max(100, Math.floor(ONLINE_POINT_MS / 4)));
+// Ping/pong dọn socket chết (mặc định 30 giây).
+const WS_PING_MS = Math.max(200, Number(process.env.WS_PING_MS) || 30_000);
+const ONLINE_POINTS = { qtv: 15, 'bdh-den': 12 }; // còn lại +10
+const ONLINE_POINTS_DEFAULT = 10;
+const VOTE_COOLDOWN_MS = 5_000;          // mỗi cặp người vote -> người nhận
+const VOTE_MAX_PER_HOUR = 60;            // mỗi người vote tối đa 60 lần được tính / giờ
+const AWARD_LIMITS = { qtv: { per: 100, day: 1000 }, 'bdh-den': { per: 50, day: 300 } };
+const STYLE_COLORS = new Set(['#1f2937', '#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#0d9488', '#2563eb', '#7c3aed', '#db2777', '#92400e', '#475569', '#000000']);
+const STYLE_SIZES = new Set([12, 14, 16, 18, 20]);
+
 
 const {
   LIVEKIT_URL = 'ws://localhost:7880',
@@ -134,6 +162,44 @@ if (!usersFileExists()) {
   }
 } else {
   console.log(`Đã tải ${Object.keys(users).length} tài khoản từ data/users.json.`);
+}
+// v3.5: bù mã số / điểm cho tài khoản cũ (mã bot được tránh ở genCode qua BOT_CODES).
+const BOT_CODES = new Set();
+if (ensureUserFields(users, BOT_CODES)) saveUsers(users);
+
+// Lưu theo lô: đánh dấu bẩn rồi ghi file tối đa 1 lần / 5 giây.
+let usersDirty = false;
+let saveTimer = null;
+function scheduleSave() {
+  usersDirty = true;
+  if (saveTimer) return;
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    if (!usersDirty) return;
+    usersDirty = false;
+    try { saveUsers(users); } catch (e) { console.error('Lỗi lưu users.json:', e); }
+  }, 5_000);
+  if (saveTimer.unref) saveTimer.unref();
+}
+function flushSave() {
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+  if (usersDirty) { usersDirty = false; try { saveUsers(users); } catch (e) { console.error(e); } }
+}
+for (const sig of ['SIGTERM', 'SIGINT']) {
+  process.on(sig, () => { flushSave(); process.exit(0); });
+}
+
+// Hồ sơ công khai của 1 tài khoản thật (v3.5).
+function profileOf(id) {
+  const u = users[id];
+  if (!u) return null;
+  const p = {
+    id, name: u.name, rank: u.rank, code: String(u.code || ''),
+    points: Number(u.points) || 0, daily: dailyOf(u), level: levelOf(u.points),
+    title: TITLES[u.rank] || TITLES.member,
+  };
+  if (u.gender === 'male' || u.gender === 'female') p.gender = u.gender;
+  return p;
 }
 
 // Chống dò mật khẩu: tối đa 10 lần sai / ID trong 5 phút.
@@ -331,6 +397,12 @@ const roomsByCreator = new Map(); // userId -> count
 //     {type:'set-rank', userId, rank}   — cấp áo BĐH đồng bộ (v3.4): QTV/đen/vàng
 //                                          cấp áo thấp hơn áo mình cho người dưới mình;
 //                                          rank 'member' = gỡ áo; không cấp được 'qtv'
+//     {type:'message', ..., style:{color,size}} — (v3.5) màu/cỡ chữ tùy chọn; sai whitelist -> bỏ style
+//     {type:'vote', room, userId}       — (v3.5) thả tim người đang lên mic: +1 điểm; cooldown 5s/cặp,
+//                                          tối đa 60 vote tính/giờ/người; vi phạm -> bỏ qua im lặng
+//     {type:'award', userId, amount}    — (v3.5) thưởng điểm: QTV 1-100/lần (1000/ngày), BĐH đen 1-50/lần
+//                                          (300/ngày, chỉ cho người dưới mình); lỗi forbidden/bad-amount/
+//                                          bad-user/award-limit
 //     {type:'loto-create', room, kinh}  — QTV/BĐH mở vòng Lô Tô (kinh 2-6); 1 vòng/phòng
 //     {type:'loto-join', room, numbers} — chốt số vào vòng đang mở
 //     {type:'loto-start', room}         — chủ vòng bắt đầu kêu số
@@ -338,7 +410,10 @@ const roomsByCreator = new Map(); // userId -> count
 //     {type:'loto-kinh', room}          — người chơi tự báo KINH
 //     {type:'loto-close', room}         — chủ vòng/QTV/BĐH đóng vòng
 //   Server -> Client:
-//     {type:'auth-ok', user:{id,name,rank}}
+//     {type:'auth-ok', user:profile}  — profile (v3.5) = {id,name,rank,gender?,code,points,daily,level,title,bot?}
+//                                          (members trong presence/room-state cũng là profile)
+//     {type:'points', userId, points, daily, level} — (v3.5) điểm vừa đổi
+//     {type:'awarded', room, fromName, toId, toName, amount} — (v3.5) vừa có người được thưởng điểm
 //     {type:'rooms', rooms:[{room,label,id}]}            — danh sách phòng đầy đủ
 //     {type:'room-state', room, label, members, messages, loto} — khi vào phòng (50 tin gần nhất + vòng Lô Tô hiện tại)
 //     {type:'message', room, msg:{id,userId,name,rank,text,time}}
@@ -453,18 +528,88 @@ function buildBotRoster(roomName, seed) {
   return [
     ...males.map((name) => ({ name, gender: 'male' })),
     ...females.map((name) => ({ name, gender: 'female' })),
-  ].map(({ name, gender }, i) => ({
-    id: `bot-${roomName}-${String(i + 1).padStart(2, '0')}`,
-    name, gender, rank: 'member', bot: true,
-  }));
+  ].map(({ name, gender }, i) => {
+    // Mã số / điểm giả lập cố định theo seed (v3.5).
+    let code;
+    do { code = String(100000000 + Math.floor(rand() * 900000000)); } while (BOT_CODES.has(code) || Object.values(users).some((u) => u && String(u.code) === code));
+    BOT_CODES.add(code);
+    const points = 40 + Math.floor(rand() * 1960);
+    const daily = Math.floor(rand() * 120);
+    return {
+      id: `bot-${roomName}-${String(i + 1).padStart(2, '0')}`,
+      name, gender, rank: 'member', bot: true,
+      code, points, daily, level: levelOf(points), title: TITLES.member,
+    };
+  });
 }
 const botRosters = new Map(
   DEFAULT_ROOM_ORDER.map((room) => [room, buildBotRoster(room, DEFAULT_ROOM_IDS[room])]),
 );
 function botsOf(roomName) { return botRosters.get(roomName) || []; }
 function membersOf(roomName) {
-  const real = [...membersMapOf(roomName).values()].map(({ id, name, rank }) => ({ id, name, rank }));
+  const real = [...membersMapOf(roomName).values()].map(({ id, name, rank }) => profileOf(id) || { id, name, rank });
   return [...real, ...botsOf(roomName)];
+}
+
+// ---- Điểm: online / vote / thưởng (v3.5) ----------------------------------
+// Gửi {type:'points'} cho mọi máy trong các phòng có user đó + chính user đó.
+function wsSendPoints(userId) {
+  const p = profileOf(userId);
+  if (!p) return;
+  const rooms = new Set();
+  for (const [roomName, m] of roomMembers) if (m.has(userId)) rooms.add(roomName);
+  const obj = { type: 'points', userId, points: p.points, daily: p.daily, level: p.level };
+  for (const client of wss.clients) {
+    if (!client.user) continue;
+    if (client.user.sub === userId || (client.room && rooms.has(client.room))) wsSend(client, obj);
+  }
+}
+// Quét online: mỗi user có >=1 socket đã auth (nhiều máy chỉ tính 1).
+let lastOnlineTick = Date.now();
+let ticksSinceSave = 0;
+function onlineTick() {
+  const now = Date.now();
+  const elapsed = Math.max(0, now - lastOnlineTick);
+  lastOnlineTick = now;
+  const online = new Set();
+  for (const client of wss.clients) if (client.user && client.readyState === 1) online.add(client.user.sub);
+  let pointsChanged = false;
+  for (const id of online) {
+    const u = users[id];
+    if (!u) continue;
+    u.onlineMs = (Number(u.onlineMs) || 0) + elapsed;
+    let gained = 0;
+    while (u.onlineMs >= ONLINE_POINT_MS) {
+      u.onlineMs -= ONLINE_POINT_MS;
+      gained += ONLINE_POINTS[u.rank] || ONLINE_POINTS_DEFAULT;
+    }
+    if (gained) { addPoints(u, gained); pointsChanged = true; wsSendPoints(id); }
+  }
+  ticksSinceSave += 1;
+  // Có điểm mới -> lưu (theo lô); chỉ tiến độ onlineMs -> lưu ~5 chu kỳ/lần.
+  if (pointsChanged || (online.size && ticksSinceSave >= 5)) { ticksSinceSave = 0; scheduleSave(); }
+}
+{
+  const t = setInterval(onlineTick, ONLINE_TICK_MS);
+  if (t.unref) t.unref();
+}
+const voteLast = new Map();   // `${voter}>${target}` -> time
+const voteBuckets = new Map(); // voter -> { count, start }
+{
+  const t = setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of voteLast) if (now - v > 60_000) voteLast.delete(k);
+    for (const [k, b] of voteBuckets) if (now - b.start > 3_600_000) voteBuckets.delete(k);
+  }, 10 * 60 * 1000);
+  if (t.unref) t.unref();
+}
+// Chuẩn hóa style chữ chat: sai -> null (bỏ style, không báo lỗi).
+function cleanStyle(style) {
+  if (!style || typeof style !== 'object') return null;
+  const color = style.color === undefined ? '#1f2937' : String(style.color).toLowerCase();
+  const size = style.size === undefined ? 14 : Number(style.size);
+  if (!STYLE_COLORS.has(color) || !STYLE_SIZES.has(size)) return null;
+  return { color, size };
 }
 
 // ---- Lô Tô chung giữa các máy (v3.2) --------------------------------------
@@ -610,7 +755,7 @@ wss.on('connection', (ws) => {
         }
         ws.user = session;
         clearTimeout(authTimer);
-        wsSend(ws, { type: 'auth-ok', user: { id: session.sub, name: session.name, rank: session.rank } });
+        wsSend(ws, { type: 'auth-ok', user: profileOf(session.sub) || { id: session.sub, name: session.name, rank: session.rank } });
         wsSend(ws, { type: 'rooms', rooms: allRooms() });
         wsSend(ws, { type: 'room-counts', counts: roomCounts() });
       }
@@ -638,6 +783,8 @@ wss.on('connection', (ws) => {
         if (!ipAllow(ws.ip || 'unknown', 'chat', 10, 10 * 1000)) return wsSend(ws, { type: 'error', code: 'rate-limited', message: 'Gửi chậm lại một chút.' });
         ws.lastMsgAt = now;
         const chatMsg = { id: nextMsgId(), userId: ws.user.sub, name: ws.user.name, rank: ws.user.rank, text, time: new Date(now).toISOString() };
+        const style = cleanStyle(msg.style);
+        if (style) chatMsg.style = style;
         const hist = messagesOf(roomName);
         hist.push(chatMsg);
         if (hist.length > WS_HISTORY) hist.splice(0, hist.length - WS_HISTORY);
@@ -718,6 +865,67 @@ wss.on('connection', (ws) => {
         }
         wsBroadcastAll({ type: 'rank-changed', userId: targetId, name: target.name, rank: newRank });
         for (const r of roomsOfTarget) wsBroadcastPresence(r);
+        break;
+      }
+      case 'vote': {
+        // Thả tim cho người đang lên mic (v3.5): +1 điểm, vi phạm -> bỏ qua im lặng.
+        const roomName = ROOMS[String(msg.room ?? '').toLowerCase()];
+        const targetId = String(msg.userId ?? '').trim().toLowerCase();
+        if (!roomName || ws.room !== roomName || !targetId || targetId === ws.user.sub) break;
+        if (!membersMapOf(roomName).has(targetId) || !users[targetId]) break;
+        const now = Date.now();
+        const pair = `${ws.user.sub}>${targetId}`;
+        if (now - (voteLast.get(pair) || 0) < VOTE_COOLDOWN_MS) break;
+        let b = voteBuckets.get(ws.user.sub);
+        if (!b || now - b.start > 3_600_000) { b = { count: 0, start: now }; voteBuckets.set(ws.user.sub, b); }
+        if (b.count >= VOTE_MAX_PER_HOUR) break;
+        b.count += 1;
+        voteLast.set(pair, now);
+        addPoints(users[targetId], 1);
+        scheduleSave();
+        wsSendPoints(targetId);
+        break;
+      }
+      case 'award': {
+        // Thưởng điểm (v3.5): QTV 1-100/lần, 1000/ngày; BĐH đen 1-50/lần, 300/ngày.
+        const lim = AWARD_LIMITS[ws.user.rank];
+        if (!lim) return wsSend(ws, { type: 'error', code: 'forbidden', message: 'Chỉ QTV (áo đỏ) và BĐH áo đen mới thưởng điểm được.' });
+        const targetId = String(msg.userId ?? '').trim().toLowerCase();
+        const target = users[targetId];
+        if (!targetId || !target) return wsSend(ws, { type: 'error', code: 'bad-user', message: 'Không tìm thấy người này.' });
+        if (targetId === ws.user.sub) return wsSend(ws, { type: 'error', code: 'forbidden', message: 'Không tự thưởng điểm cho mình.' });
+        if (ws.user.rank === 'bdh-den' && !(RANK_ORDER[target.rank] > RANK_ORDER['bdh-den'])) {
+          return wsSend(ws, { type: 'error', code: 'forbidden', message: 'BĐH áo đen chỉ thưởng điểm cho người dưới cấp mình.' });
+        }
+        const amount = Number(msg.amount);
+        if (!Number.isInteger(amount) || amount < 1 || amount > lim.per) {
+          return wsSend(ws, { type: 'error', code: 'bad-amount', message: `Mỗi lần thưởng 1-${lim.per} điểm.` });
+        }
+        const giver = users[ws.user.sub];
+        const today = todayVN();
+        const used = giver && giver.awardDaily && giver.awardDaily.date === today ? Number(giver.awardDaily.total) || 0 : 0;
+        if (used + amount > lim.day) {
+          return wsSend(ws, { type: 'error', code: 'award-limit', message: `Hết hạn mức thưởng hôm nay (còn ${Math.max(0, lim.day - used)}/${lim.day} điểm).` });
+        }
+        if (giver) giver.awardDaily = { date: today, total: used + amount };
+        addPoints(target, amount);
+        saveUsers(users);
+        wsSendPoints(targetId);
+        const rooms = new Set();
+        for (const [roomName, m] of roomMembers) if (m.has(targetId)) rooms.add(roomName);
+        const sentTo = new Set();
+        for (const roomName of rooms) {
+          const obj = { type: 'awarded', room: roomName, fromName: ws.user.name, toId: targetId, toName: target.name, amount };
+          for (const client of wss.clients) {
+            if (client.user && client.room === roomName) { wsSend(client, obj); sentTo.add(client); }
+          }
+        }
+        // Người thưởng / người nhận không cùng phòng vẫn nhận xác nhận.
+        const direct = { type: 'awarded', room: [...rooms][0] || null, fromName: ws.user.name, toId: targetId, toName: target.name, amount };
+        for (const client of wss.clients) {
+          if (!client.user || sentTo.has(client)) continue;
+          if (client === ws || client.user.sub === targetId) wsSend(client, direct);
+        }
         break;
       }
       case 'loto-create': {
@@ -812,6 +1020,8 @@ wss.on('connection', (ws) => {
     }
   });
 
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
   ws.on('close', () => { clearTimeout(authTimer); wsLeaveRoom(ws); wsUntrackIp(ws); });
   ws.on('error', () => { /* socket lỗi: close sẽ dọn dẹp */ });
 });
@@ -834,6 +1044,19 @@ for (const roomName of DEFAULT_ROOM_ORDER) {
   if (t.unref) t.unref();
 }
 
+// Ping/pong (v3.5): socket không trả pong sau 1 chu kỳ (máy mất mạng, tab
+// bị kill mà không đóng kết nối) bị cắt -> close dọn presence + room-counts.
+{
+  const t = setInterval(() => {
+    for (const client of wss.clients) {
+      if (client.isAlive === false) { client.terminate(); continue; }
+      client.isAlive = false;
+      try { client.ping(); } catch { /* bỏ */ }
+    }
+  }, WS_PING_MS);
+  if (t.unref) t.unref();
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   if (req.method === 'OPTIONS') return send(res, 204, {});
@@ -847,7 +1070,13 @@ const server = http.createServer(async (req, res) => {
         livekitUrl: LIVEKIT_URL, time: new Date().toISOString(),
         ws: true, connections: wss.clients.size, rooms: allRooms().length,
         lotoRounds: lotoByRoom.size,
+        maintenance: MAINTENANCE, ...(MAINTENANCE ? { message: MAINTENANCE_MESSAGE } : {}),
       });
+    }
+
+    // Bảo trì (v3.5): chặn đăng nhập / đăng ký / xin token voice.
+    if (MAINTENANCE && ['/login', '/register', '/token'].includes(url.pathname)) {
+      return send(res, 503, { error: 'maintenance', message: MAINTENANCE_MESSAGE });
     }
 
     // GET /rooms — danh sách phòng.
@@ -880,6 +1109,7 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, {
         session: signSession({ id, name: user.name, rank: user.rank }),
         id, name: user.name, rank: user.rank, expiresIn: SESSION_TTL,
+        user: profileOf(id),
       });
     }
 
@@ -899,11 +1129,17 @@ const server = http.createServer(async (req, res) => {
         return send(res, 400, { error: 'Mật khẩu phải dài 4-64 ký tự.' });
       }
       if (users[id]) return send(res, 409, { error: `ID ${id} đã có người dùng.` });
-      users[id] = { name, rank: 'member', passwordHash: hashPassword(password), createdAt: new Date().toISOString() };
+      const gender = body.gender === 'male' || body.gender === 'female' ? body.gender : undefined;
+      users[id] = {
+        name, rank: 'member', passwordHash: hashPassword(password), createdAt: new Date().toISOString(),
+        code: genCode(users, BOT_CODES), points: 0, daily: { date: todayVN(), points: 0 }, onlineMs: 0,
+        ...(gender ? { gender } : {}),
+      };
       saveUsers(users);
       return send(res, 201, {
         session: signSession({ id, name, rank: 'member' }),
         id, name, rank: 'member', expiresIn: SESSION_TTL,
+        user: profileOf(id),
       });
     }
 
@@ -911,7 +1147,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/me') {
       const session = sessionFromReq(req, Object.fromEntries(url.searchParams.entries()));
       if (!session) return send(res, 401, { error: 'Chưa đăng nhập (thiếu session hợp lệ).' });
-      return send(res, 200, { id: session.sub, name: session.name, rank: session.rank });
+      return send(res, 200, { id: session.sub, name: session.name, rank: session.rank, user: profileOf(session.sub) });
     }
 
     // GET /stage/:room — ai đang trên mic trong phòng (debug).
@@ -984,6 +1220,14 @@ server.on('upgrade', (req, socket, head) => {
   if (url.pathname !== '/ws') { socket.destroy(); return; }
   const ip = clientIp(req);
   if ((wsConnsByIp.get(ip) || 0) >= MAX_WS_PER_IP) { socket.destroy(); return; }
+  if (MAINTENANCE) {
+    // Bảo trì: nhận kết nối rồi đóng ngay mã 4503 (trang hiện màn hình chờ).
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      try { ws.send(JSON.stringify({ type: 'error', code: 'maintenance', message: MAINTENANCE_MESSAGE })); } catch { /* bỏ */ }
+      ws.close(4503, 'maintenance');
+    });
+    return;
+  }
   wss.handleUpgrade(req, socket, head, (ws) => {
     wsTrackIp(ws, ip);
     wss.emit('connection', ws, req);

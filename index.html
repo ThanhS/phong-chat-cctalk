@@ -257,8 +257,18 @@
       .maint-count{font-size:.88rem;font-weight:700;color:#dceffb;min-height:1.3em;text-align:center;}
       .maint-retry{width:min(330px,100%);background:linear-gradient(180deg,#ffb03a,#e07b24);color:#fff;border:0;border-radius:999px;padding:.78rem 1rem;font-size:1rem;font-weight:800;box-shadow:0 8px 20px rgba(2,32,54,.4);}
       .maint-retry:hover{filter:brightness(1.07);}
-      .maint-demo{background:none;border:0;color:rgba(255,255,255,.75);font-size:.84rem;font-weight:700;text-decoration:underline;min-height:2rem;padding:.2rem .5rem;}
-      .maint-demo:hover{color:#fff;}
+      /* Khối vào demo trên màn hình bảo trì: chọn vai QTV / BĐH / Thành viên
+         để admin test được chức năng quản lý ngay cả khi máy chủ đang tắt */
+      .maint-demo-box{width:min(540px,100%);margin-top:.55rem;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.32);border-radius:16px;padding:.8rem .9rem .85rem;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);}
+      .maint-demo-title{text-align:center;font-weight:800;font-size:.98rem;letter-spacing:.01em;}
+      .maint-demo-btns{display:grid;grid-template-columns:1fr;gap:.5rem;margin-top:.65rem;}
+      @media (min-width:560px){ .maint-demo-btns{grid-template-columns:repeat(3,1fr);} }
+      .maint-role-btn{border-radius:12px;padding:.62rem .5rem;font-size:.92rem;font-weight:800;min-height:2.75rem;border:1.5px solid transparent;box-shadow:0 5px 14px rgba(2,32,54,.35);}
+      .maint-role-btn:hover{filter:brightness(1.08);}
+      .maint-role-btn.qtv{background:linear-gradient(180deg,#f0563f,#c22f1d);color:#fff;}
+      .maint-role-btn.bdh{background:linear-gradient(180deg,#2c3138,#12161a);color:#fff;border-color:rgba(255,255,255,.4);}
+      .maint-role-btn.member{background:rgba(255,255,255,.94);color:#0b5a86;}
+      .maint-demo-note{margin-top:.6rem;text-align:center;font-size:.78rem;line-height:1.45;color:rgba(255,255,255,.78);}
       @media (max-width:640px){
         .maint-card{padding:2.4rem 1.15rem 1.2rem;border-radius:22px;}
         .maint-tab{padding:.45rem 1rem .6rem;}
@@ -819,7 +829,15 @@
         <div class="maint-actions">
           <div class="maint-count" id="maintCount"></div>
           <button class="maint-retry" id="maintRetryBtn" type="button">Thử lại ngay</button>
-          <button class="maint-demo" id="maintDemoBtn" type="button">Vào chế độ demo (xem thử offline, mỗi máy một phòng riêng)</button>
+          <div class="maint-demo-box">
+            <div class="maint-demo-title">Vào chế độ demo (không cần máy chủ)</div>
+            <div class="maint-demo-btns">
+              <button class="maint-role-btn qtv" type="button" data-demo-role="qtv">QTV (áo đỏ)</button>
+              <button class="maint-role-btn bdh" type="button" data-demo-role="bdh-den">BĐH (áo đen)</button>
+              <button class="maint-role-btn member" type="button" data-demo-role="member">Thành viên</button>
+            </div>
+            <div class="maint-demo-note">Chọn vai để vào test ngay — không cần mật khẩu. Demo chỉ chạy trên máy này, không đồng bộ sang máy khác.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1507,7 +1525,9 @@
         };
       }
       function myProfile(){
-        var base = (authProfile && (authProfile.code != null || authProfile.points != null)) ? authProfile : null;
+        /* Chế độ demo: hồ sơ lấy từ vai demo đã chọn (state.myCode /
+           myPoints do enterAs nạp), không dùng hồ sơ máy chủ đã lưu */
+        var base = (!demoMode && authProfile && (authProfile.code != null || authProfile.points != null)) ? authProfile : null;
         var fb = fakeProfile(state.userId || state.user || "me");
         var points = base && base.points != null ? parseInt(base.points, 10) || 0 : (state.myPoints != null ? state.myPoints : fb.points);
         return {
@@ -1565,8 +1585,13 @@
          chuyển "Hệ thống đang bảo trì / cập nhật". Tự thử lại /health
          mỗi 15 giây; máy chủ trả ok + maintenance:false thì tự ẩn. */
       var maint = { active: false, since: 0, timer: null, tick: null, nextAt: 0, msg: "", suppressed: false, checking: false };
+      /* Đang ở chế độ demo (vào từ màn hình bảo trì, chọn vai QTV / BĐH /
+         Thành viên): demo chạy local trên máy này, không gọi máy chủ —
+         máy chủ khỏe lại cũng KHÔNG tự kéo user ra khỏi demo */
+      var demoMode = false;
       function maintShow(reasonMsg){
         if(!authServer) return;
+        if(demoMode) return;
         if(maint.suppressed) return;
         if(!maint.active){ maint.active = true; maint.since = Date.now(); }
         if(reasonMsg) maint.msg = String(reasonMsg);
@@ -1600,6 +1625,7 @@
         }
       }
       function maintCheck(manual){
+        if(demoMode) return; /* Đã vào demo: không kiểm tra / không tự kéo ra khỏi demo khi máy chủ khỏe lại */
         if(!authServer){ maintHide(); return; }
         if(maint.checking) return;
         maint.checking = true; maintRender();
@@ -2085,6 +2111,7 @@
         }
       }
       function hubConnect(){
+        if(demoMode) return; /* Demo local: không nối hub máy chủ */
         if(!authServer || !authSession) return;
         if(hub.ws && (hub.ws.readyState === 0 || hub.ws.readyState === 1)) return;
         var url = hubWsUrl(); if(!url) return;
@@ -2308,7 +2335,7 @@
 
       /* ================= State ================= */
       var state = {
-        user: null, userId: null, role: "user", hue: 210, gender: "M", memberTag: null,
+        user: null, userId: null, role: "user", hue: 210, gender: "M", memberTag: null, demo: false,
         roomId: "101",
         mode: "free",
         openRooms: { "101": true },
@@ -2666,7 +2693,13 @@
         el.classList.toggle("show", !!msg);
         if(msg) sfx("error");
       }
-      function enterAs(acc){
+      function enterAs(acc, opts){
+        /* opts.demo=true khi vào từ màn hình bảo trì (chọn vai demo):
+           phiên này chạy local hoàn toàn — không nối hub, không dùng /
+           không ghi đè hồ sơ máy chủ đã lưu trên máy */
+        var demoEntry = !!(opts && opts.demo);
+        demoMode = demoEntry;
+        state.demo = demoEntry;
         state.user = acc.name;
         state.userId = acc.id;
         state.role = acc.role;
@@ -2679,7 +2712,7 @@
         if(acc.code) state.myCode = acc.code;
         if(acc.points != null) state.myPoints = acc.points;
         if(acc.daily != null) state.myDaily = acc.daily;
-        if(authProfile){
+        if(authProfile && !demoEntry){
           if(acc.code) authProfile.code = acc.code;
           if(acc.points != null) authProfile.points = acc.points;
           if(acc.daily != null) authProfile.daily = acc.daily;
@@ -2748,6 +2781,7 @@
       /* Session hết hạn / bị máy chủ từ chối (401 ở /me, /token, /stage):
          xóa session đã lưu trên máy và đưa về màn hình đăng nhập. */
       function sessionExpired(){
+        if(demoMode) return; /* Demo local không có session máy chủ — không đá user demo về màn đăng nhập */
         clearAuthSession();
         try{ hubDisconnect(); }catch(e){}
         if(!state.user){
@@ -4124,6 +4158,7 @@
         n.textContent = "Đã nối máy chủ voice LiveKit — phòng voice “" + lk.roomSlug + "” khớp sảnh bạn đang ở: người ở máy khác vào cùng phòng sẽ nghe bạn nói trực tiếp qua loa, và bạn cũng nghe họ. Chỉ báo “Đang nói” chạy theo tiếng thật qua máy chủ." + (lk.canPublish ? "" : " Bạn đang ở quyền chỉ nghe trên máy chủ — lên mic (chế độ xếp hàng) là được cấp quyền nói.");
       }
       function lkFetchToken(cb){
+        if(demoMode){ lkSetStatus("", "Chế độ demo: voice LiveKit cần đăng nhập máy chủ — demo chỉ test giao diện và mic local trên máy này."); cb(null); return; }
         if(!authSession){ sessionExpired(); cb(null); return; }
         /* Chỉ gửi room + session (header Authorization: Bearer): ID và
            cấp bậc máy chủ tự lấy từ session — KHÔNG gửi rank do client
@@ -5484,6 +5519,7 @@
           micSetStatus("🎤 Mic: chưa bật — lần đầu bấm nói, trình duyệt sẽ hỏi quyền dùng mic của điện thoại / máy tính, hãy bấm Cho phép (Allow).", "");
         }
         state.running = false;
+        demoMode = false; state.demo = false;
         state.user = null; state.userId = null; state.role = "user"; state.speaking = null; state.grant = null; state.memberTag = null;
         $("chatInput").disabled = false; $("pttBtn").disabled = false;
         if(state.music){ stopMusic(); state.music = false; $("musicBtn").classList.remove("on"); }
@@ -6357,21 +6393,37 @@
         toast("Đã đóng vòng — BĐH chọn cách kinh rồi bấm Tạo vòng lô tô để mở vòng mới cho cả phòng");
       });
 
-      /* Màn hình chờ bảo trì: nút Thử lại ngay kiểm tra /health tức thì;
-         nút Vào chế độ demo tắt màn chờ và ở lại chế độ bot demo offline */
+      /* Màn hình chờ bảo trì: nút Thử lại ngay kiểm tra /health tức thì
+         (giữ nguyên đếm ngược tự thử lại mỗi 15 giây) */
       $("maintRetryBtn").addEventListener("click", function(){ maint.nextAt = Date.now() + 15000; maintCheck(true); });
-      $("maintDemoBtn").addEventListener("click", function(){
+      /* Vào chế độ demo từ màn hình bảo trì — chọn vai để admin test được
+         chức năng quản lý ngay cả khi máy chủ đang tắt. KHÔNG cần mật
+         khẩu, KHÔNG gọi máy chủ: chỉ tạo tài khoản demo ngay trên máy này
+         qua enterAs(acc, {demo:true}). Với vai QTV / BĐH, mọi chức năng
+         quản lý local đều dùng được như bình thường: cấp áo (local),
+         thưởng điểm (local), cài đặt phòng (cooldown), chuyển chế độ
+         phòng, thêm user vào xếp hàng mic, tạo vòng Lô Tô, tạo phòng mới
+         (local). Đã vào demo thì ở lại demo: maint.suppressed + demoMode
+         chặn màn bảo trì hiện lại và chặn việc tự kéo ra khỏi demo khi
+         máy chủ khỏe lại (tự ẩn màn bảo trì chỉ áp dụng khi CHƯA vào demo). */
+      var DEMO_ROLES = {
+        "qtv": { id: "demo-qtv", name: "Quản Trị Viên (demo)", role: "admin", memberTag: null, grant: null, gender: "M", label: "QTV (áo đỏ)" },
+        "bdh-den": { id: "demo-bdh", name: "BĐH ccTalk Đen (demo)", role: "user", memberTag: "BĐH", grant: null, gender: "M", label: "BĐH (áo đen)" },
+        "member": { id: "demo-member", name: "Thành viên demo", role: "user", memberTag: null, grant: null, gender: "M", label: "Thành viên" }
+      };
+      function enterDemo(roleKey){
+        var d = DEMO_ROLES[roleKey] || DEMO_ROLES.member;
+        try{ hubDisconnect(); }catch(e){} /* Ngắt hẳn hub (nếu đang nối dở) — demo chạy local hoàn toàn */
+        var fp = fakeProfile(d.id);
+        var acc = { id: d.id, name: d.name, role: d.role, memberTag: d.memberTag, grant: d.grant, gender: d.gender, hue: hueFromId(d.id), code: fp.code, points: fp.points, daily: fp.daily };
         maint.suppressed = true;
         maintHide();
         maint.suppressed = true;
-        if(!state.user){
-          /* Chưa đăng nhập được: đưa về màn đăng nhập (vẫn xem được giao
-             diện phòng demo phía sau) — đăng nhập cần máy chủ, demo chỉ
-             để xem thử nên không ép đăng nhập */
-          toast("Đang ở chế độ xem thử demo — máy chủ sẵn sàng thì bấm Thử lại ở lần mở sau hoặc tải lại trang để đăng nhập");
-        } else {
-          toast("Đang ở chế độ demo offline — mỗi máy một phòng riêng");
-        }
+        enterAs(acc, { demo: true });
+        toast("Đang ở chế độ demo với vai " + d.label + " — test thoải mái trên máy này, máy chủ bật lại cũng không tự thoát demo");
+      }
+      document.querySelectorAll("[data-demo-role]").forEach(function(btn){
+        btn.addEventListener("click", function(){ enterDemo(btn.getAttribute("data-demo-role")); });
       });
 
       /* Init */

@@ -1,9 +1,10 @@
 {
   "dependencies": {
     "livekit-server-sdk": "^2.20.0",
+    "pg": "^8.23.1",
     "ws": "^8.18.0"
   },
-  "description": "Token server cho phòng chat ccTalk: cấp JWT LiveKit theo phòng + cấp bậc (QTV/BĐH/thành viên), đăng nhập phía máy chủ, hub WebSocket đồng bộ chat + hiện diện + phòng + Lô Tô + cấp áo BĐH giữa các máy, chống spam/lạm dụng theo IP, mã số + điểm thành viên/điểm ngày/cấp bậc, vote + thưởng điểm, màu/cỡ chữ chat, chế độ bảo trì (MAINTENANCE), ping/pong dọn socket chết.",
+  "description": "Token server cho phòng chat ccTalk: cấp JWT LiveKit theo phòng + cấp bậc (QTV/BĐH/thành viên), đăng nhập phía máy chủ, hub WebSocket đồng bộ chat + hiện diện + phòng + Lô Tô + cấp áo BĐH giữa các máy, chống spam/lạm dụng theo IP, mã số + điểm thành viên/điểm ngày/cấp bậc, vote + thưởng điểm, màu/cỡ chữ chat, chế độ bảo trì (MAINTENANCE), ping/pong dọn socket chết, lưu trữ bền bằng Postgres/Neon qua DATABASE_URL (bảng kv) — không có DATABASE_URL thì lưu file users.json như cũ.",
   "engines": {
     "node": ">=20"
   },
@@ -13,5 +14,9 @@
     "start": "node server.js"
   },
   "type": "module",
-  "version": "1.5.0"
+  "version": "1.6.0",
+  "devDependencies": {
+    "embedded-postgres": "^18.7.0-beta.19",
+    "pg-mem": "^3.0.14"
+  }
 }

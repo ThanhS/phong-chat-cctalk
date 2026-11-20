@@ -36,6 +36,11 @@ Từ v2, việc kiểm tra đăng nhập nằm ở token-server, trang web khôn
 mật khẩu hay danh sách tài khoản:
 - Tài khoản lưu trong `token-server/data/users.json` (chỉ có trên máy chủ,
   đã thêm vào `.gitignore`, không bao giờ commit). Mật khẩu băm scrypt.
+  Từ v3.6: đặt thêm biến môi trường `DATABASE_URL` (Postgres của Neon) thì
+  kho tài khoản + phòng tự tạo lưu bền trên Postgres (bảng `kv`), file
+  users.json chỉ còn là bản sao local; không có `DATABASE_URL` (hoặc nối
+  DB lỗi lúc khởi động) thì vẫn lưu file như cũ. Xem mục v3.6 trong
+  README ở gốc repo.
 - Lần khởi động đầu tiên (chưa có file users): server tự gieo tài khoản từ
   biến môi trường `ADMIN_PASSWORD` (admin/QTV), `BDH_PASSWORD` (bdh/BĐH đen),
   `THANH_PASSWORD` (thanh/thành viên, nếu đặt), `TEST_PASSWORD`

@@ -75,3 +75,31 @@ Nhạc Lô Tô nằm trong thư mục `assets/loto/` (01–90 + intro).
 - Ping/pong mỗi 30 giây dọn kết nối chết (mất mạng, tắt tab đột ngột) để
   số người mỗi phòng luôn khớp thực tế.
 - Test local: `node test-ws.mjs` — 90/90 PASS.
+
+### v3.6 — Lưu trữ bền bằng Postgres (Neon)
+
+- Đặt biến môi trường `DATABASE_URL` (chuỗi kết nối Postgres của Neon,
+  chọn vùng Singapore cho gần Render) thì kho tài khoản (mật khẩu băm,
+  mã số, điểm, áo BĐH) và phòng tự tạo được lưu vào bảng `kv`
+  (`key`/`value` JSONB) trên Postgres — **không còn mất khi máy chủ
+  khởi động lại hay deploy bản mới** (Render gói miễn phí không có ổ đĩa
+  bền). File `data/users.json` vẫn được ghi song song làm bản sao local.
+- Lần khởi động đầu với DB trống: máy chủ lấy kho tài khoản từ file nếu
+  có, không thì gieo từ biến môi trường như cũ, rồi lưu lên DB. Các lần
+  sau tải thẳng từ DB (vẫn bù mã số/điểm cho tài khoản cũ nếu thiếu).
+- Lưu khi: đăng ký, cấp áo, tạo/xóa phòng (ngay), thưởng điểm + điểm
+  online + vote (theo lô, tối đa 1 lần ghi / 5 giây), mỗi 30 phút, và
+  lúc tắt máy chủ (SIGTERM/SIGINT). Ghi thưa để Neon ngủ giữa các lần
+  ghi, không tốn giờ chạy của gói miễn phí.
+- Không có `DATABASE_URL`, hoặc nối Postgres thất bại lúc khởi động:
+  máy chủ vẫn chạy bình thường, quay về lưu file như trước v3.6 (có cảnh
+  báo lớn trong log). `/health` có thêm trường `storage`:
+  `"postgres"` hoặc `"file"`.
+- Lưu ý: `add-user.js` vẫn chỉ sửa file `data/users.json` — khi đã dùng
+  Postgres thì tài khoản trong DB mới là bản chính, đừng dùng add-user
+  để đặt lại mật khẩu nữa (sẽ bị DB ghi đè ở lần lưu sau).
+- Test local: `node test-db.mjs` — 26/26 PASS (db.js bằng pg-mem +
+  server thật nối Postgres thật: gieo khi DB trống, restart còn nguyên
+  tài khoản/điểm/áo/phòng, DATABASE_URL hỏng thì quay về file).
+- Trên Render: `render.yaml` đã có sẵn biến `DATABASE_URL` (điền lúc
+  deploy, không commit giá trị thật).

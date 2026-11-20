@@ -6,9 +6,11 @@
 #
 # Lưu ý gói miễn phí: máy chủ ngủ sau 15 phút không ai dùng, lần gọi đầu tiên
 # sau đó mất ~30-60 giây để tỉnh lại (lần đăng nhập đầu sau khi nghỉ sẽ chậm).
-# Tài khoản demo được gieo lại từ biến môi trường mỗi lần máy chủ khởi động;
-# nick đăng ký qua /register sẽ mất khi máy chủ restart (không có ổ đĩa bền ở
-# gói miễn phí) — dùng để test là đủ.
+# Từ v3.6: đặt DATABASE_URL (chuỗi kết nối Postgres của Neon, vùng Singapore)
+# thì tài khoản tự đăng ký, mã số, điểm, áo BĐH và phòng tự tạo được lưu bền
+# trên Neon, không còn mất khi máy chủ khởi động lại. Không đặt DATABASE_URL
+# thì vẫn như cũ: tài khoản gieo lại từ biến môi trường mỗi lần khởi động,
+# nick đăng ký qua /register sẽ mất khi máy chủ restart.
 services:
   - type: web
     name: cctalk-token-server
@@ -35,6 +37,12 @@ services:
       # Chế độ cũ (client tự khai rank) luôn tắt:
       - key: ALLOW_LEGACY_TOKEN
         value: "0"
+      # Chuỗi kết nối Postgres của Neon (v3.6) — dán từ dashboard Neon
+      # (project vùng Singapore, dạng postgres://user:pass@host/db?sslmode=require).
+      # Có biến này thì tài khoản/điểm/phòng tự tạo lưu bền, không mất khi
+      # restart. Để trống thì máy chủ vẫn chạy, lưu file như cũ.
+      - key: DATABASE_URL
+        sync: false
       # Mật khẩu gieo tài khoản demo ở lần khởi động đầu (đặt mật khẩu mạnh;
       # THANH_PASSWORD có thể để trống nếu không dùng nick thanh):
       - key: ADMIN_PASSWORD

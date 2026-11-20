@@ -39,11 +39,16 @@
 // thưởng điểm (award) có hạn mức ngày. Màu + cỡ chữ chat (style, whitelist).
 // Chế độ bảo trì MAINTENANCE=1. Ping/pong 30s dọn socket chết để số người
 // mỗi phòng luôn khớp thực tế.
+// V3.6: lưu trữ bền bằng Postgres (Neon) khi có DATABASE_URL — kho tài
+// khoản + phòng tự tạo lưu vào bảng kv (xem db.js) nên không mất khi máy
+// chủ khởi động lại; vẫn ghi file data/users.json làm bản sao local. Không
+// có DATABASE_URL (hoặc nối DB lỗi lúc khởi động) thì lưu file như cũ.
 
 import http from 'node:http';
 import crypto from 'node:crypto';
 import { AccessToken } from 'livekit-server-sdk';
 import { WebSocketServer } from 'ws';
+import { connectDb, createDbStore } from './db.js';
 import {
   loadUsers, saveUsers, usersFileExists, seedFromEnv,
   hashPassword, verifyPassword, validId, RANKS, MANAGER_RANKS, setUserRank,
@@ -149,10 +154,25 @@ function verifySession(token) {
 
 // ---- Kho tài khoản --------------------------------------------------------
 
-// Gieo tài khoản demo từ biến môi trường chỉ ở lần khởi động đầu tiên
-// (khi chưa có file data/users.json). Từ lần sau, file users.json quyết định.
-let users = loadUsers();
-if (!usersFileExists()) {
+// Lưu trữ bền (v3.6): có DATABASE_URL thì kho tài khoản + phòng tự tạo
+// lưu trên Postgres (Neon, bảng kv — xem db.js); file data/users.json vẫn
+// được ghi song song làm bản sao local. Không có DATABASE_URL, hoặc nối
+// Postgres thất bại lúc khởi động, thì quay về lưu file như trước v3.6
+// (máy chủ vẫn chạy bình thường).
+let users = {};
+let dbPool = null;
+let dbStore = null;
+let storageMode = 'file'; // 'postgres' khi DB sẵn sàng (hiện trong /health)
+const BOT_CODES = new Set();
+
+function seedOrLoadFromFile() {
+  // Hành vi cũ (trước v3.6): có file thì tải file; chưa có file thì gieo
+  // tài khoản demo từ biến môi trường ở lần khởi động đầu tiên.
+  users = loadUsers();
+  if (usersFileExists()) {
+    console.log(`Đã tải ${Object.keys(users).length} tài khoản từ data/users.json.`);
+    return;
+  }
   const seeded = seedFromEnv(users);
   if (seeded.length) {
     saveUsers(users);
@@ -160,14 +180,49 @@ if (!usersFileExists()) {
   } else {
     console.log('Chưa có tài khoản nào. Đặt ADMIN_PASSWORD/BDH_PASSWORD/TEST_PASSWORD trong .env rồi restart, hoặc tạo bằng POST /register.');
   }
+}
+
+if (process.env.DATABASE_URL) {
+  try {
+    dbPool = await connectDb(process.env.DATABASE_URL);
+    dbStore = createDbStore(dbPool);
+    await dbStore.init();
+    const fromDb = await dbStore.load('users');
+    if (fromDb && typeof fromDb === 'object' && !Array.isArray(fromDb)) {
+      users = fromDb;
+      console.log(`Đã tải ${Object.keys(users).length} tài khoản từ Postgres (bảng kv).`);
+    } else {
+      // DB chưa có kho tài khoản: lấy từ file nếu có, không thì gieo từ
+      // biến môi trường (như hành vi cũ), rồi lưu lên DB.
+      seedOrLoadFromFile();
+      await dbStore.save('users', users);
+      console.log('Đã lưu kho tài khoản lên Postgres (bảng kv, key "users").');
+    }
+    storageMode = 'postgres';
+  } catch (e) {
+    console.error('CẢNH BÁO LỚN: không nối được Postgres qua DATABASE_URL — quay về lưu file data/users.json như cũ (dữ liệu sẽ mất khi máy chủ khởi động lại). Lỗi:', e.message);
+    dbPool = null;
+    dbStore = null;
+    storageMode = 'file';
+    seedOrLoadFromFile();
+  }
 } else {
-  console.log(`Đã tải ${Object.keys(users).length} tài khoản từ data/users.json.`);
+  seedOrLoadFromFile();
 }
 // v3.5: bù mã số / điểm cho tài khoản cũ (mã bot được tránh ở genCode qua BOT_CODES).
-const BOT_CODES = new Set();
-if (ensureUserFields(users, BOT_CODES)) saveUsers(users);
+if (ensureUserFields(users, BOT_CODES)) {
+  try { saveUsers(users); } catch (e) { console.error('Lỗi lưu users.json:', e); }
+  if (dbStore) await dbStore.save('users', users).catch((e) => console.error('Lỗi lưu users vào Postgres:', e.message));
+}
 
-// Lưu theo lô: đánh dấu bẩn rồi ghi file tối đa 1 lần / 5 giây.
+// Lưu kho tài khoản ngay: ghi file (bản sao local) + ghi Postgres nếu có.
+function persistUsers() {
+  try { saveUsers(users); } catch (e) { console.error('Lỗi lưu users.json:', e); }
+  if (dbStore) dbStore.save('users', users).catch((e) => console.error('Lỗi lưu users vào Postgres:', e.message));
+}
+
+// Lưu theo lô: đánh dấu bẩn rồi lưu tối đa 1 lần / 5 giây (điểm online,
+// vote, thưởng điểm đi đường này để không ghi DB liên tục).
 let usersDirty = false;
 let saveTimer = null;
 function scheduleSave() {
@@ -177,16 +232,30 @@ function scheduleSave() {
     saveTimer = null;
     if (!usersDirty) return;
     usersDirty = false;
-    try { saveUsers(users); } catch (e) { console.error('Lỗi lưu users.json:', e); }
+    persistUsers();
   }, 5_000);
   if (saveTimer.unref) saveTimer.unref();
 }
-function flushSave() {
+// Lưu nốt trước khi tắt (SIGTERM/SIGINT): ghi file + chờ ghi Postgres
+// (tối đa 3 giây để không treo lúc Render tắt máy chủ).
+async function flushSave() {
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-  if (usersDirty) { usersDirty = false; try { saveUsers(users); } catch (e) { console.error(e); } }
+  usersDirty = false;
+  try { saveUsers(users); } catch (e) { console.error(e); }
+  if (dbStore) {
+    const saves = Promise.all([dbStore.save('users', users), dbStore.save('rooms', roomsSnapshot())]);
+    const timeout = new Promise((r) => setTimeout(r, 3_000));
+    await Promise.race([saves, timeout]).catch((e) => console.error('Lỗi lưu vào Postgres lúc tắt:', e.message));
+  }
 }
+let shuttingDown = false;
 for (const sig of ['SIGTERM', 'SIGINT']) {
-  process.on(sig, () => { flushSave(); process.exit(0); });
+  process.on(sig, async () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    await flushSave();
+    process.exit(0);
+  });
 }
 
 // Hồ sơ công khai của 1 tài khoản thật (v3.5).
@@ -430,11 +499,13 @@ const roomsByCreator = new Map(); // userId -> count
 //     {type:'loto-kinh', room, winner}   — có người KINH, vòng kết thúc
 //     {type:'loto-closed', room}         — vòng bị đóng, được tạo vòng mới
 //     {type:'error', code, message}
-// Trạng thái chỉ giữ trong RAM — Render gói miễn phí không có ổ đĩa bền nên
-// restart sẽ mất tin nhắn + phòng tự tạo + vòng Lô Tô (tài khoản thì gieo
-// lại từ biến môi trường). Hàng đợi mic chưa đồng bộ qua hub này (vẫn chạy
-// local từng máy). Lô Tô đồng bộ từ v3.2: 1 vòng/phòng, chủ vòng kêu số,
-// máy chủ kiểm tra KINH và phát cho cả phòng.
+// Trạng thái giữ trong RAM: tin nhắn + vòng Lô Tô mất khi restart. Tài
+// khoản + phòng tự tạo thì bền từ v3.6 khi có DATABASE_URL (Postgres);
+// không có DATABASE_URL thì phòng tự tạo vẫn chỉ ở RAM và tài khoản gieo
+// lại từ biến môi trường mỗi lần khởi động (Render gói miễn phí không có
+// ổ đĩa bền). Hàng đợi mic chưa đồng bộ qua hub này (vẫn chạy local từng
+// máy). Lô Tô đồng bộ từ v3.2: 1 vòng/phòng, chủ vòng kêu số, máy chủ
+// kiểm tra KINH và phát cho cả phòng.
 
 const WS_AUTH_TIMEOUT_MS = 10_000;
 const WS_MAX_MSG_LEN = 500;
@@ -444,6 +515,68 @@ const WS_HISTORY = 50;
 // Phòng tự tạo: slug -> { id, label, createdBy }. ID chạy từ 104.
 const customRooms = new Map();
 let nextRoomId = 104;
+
+// ---- Phòng tự tạo: lưu/khôi phục qua Postgres (v3.6) ----------------------
+// Ảnh chụp phòng tự tạo để lưu vào bảng kv (key "rooms"):
+// { customRooms: [{room, id, label, createdBy}], byCreator: {userId: count} }.
+function roomsSnapshot() {
+  return {
+    customRooms: [...customRooms].map(([room, r]) => ({ room, id: r.id, label: r.label, createdBy: r.createdBy })),
+    byCreator: Object.fromEntries(roomsByCreator),
+  };
+}
+function persistRooms() {
+  if (dbStore) dbStore.save('rooms', roomsSnapshot()).catch((e) => console.error('Lỗi lưu phòng tự tạo vào Postgres:', e.message));
+}
+// Khôi phục phòng tự tạo từ bản lưu: đăng ký lại vào ROOMS/ROOM_LABELS
+// y như lúc create-room, và đẩy nextRoomId lên sau ID lớn nhất đã dùng.
+function restoreRooms(saved) {
+  const list = Array.isArray(saved?.customRooms) ? saved.customRooms : [];
+  let restored = 0;
+  for (const r of list) {
+    const room = String(r?.room || '');
+    const id = Number(r?.id);
+    const label = String(r?.label || '');
+    const createdBy = String(r?.createdBy || '');
+    if (!/^phong-\d+$/.test(room) || !Number.isInteger(id) || id < 104 || !label || customRooms.has(room)) continue;
+    customRooms.set(room, { id, label, createdBy });
+    ROOMS[String(id)] = room;
+    ROOMS[room] = room;
+    ROOM_LABELS[room] = label;
+    if (id >= nextRoomId) nextRoomId = id + 1;
+    restored += 1;
+  }
+  // Số phòng mỗi người đã tạo: lấy từ bản lưu; thiếu thì đếm lại từ phòng.
+  const byCreator = saved?.byCreator && typeof saved.byCreator === 'object' ? saved.byCreator : null;
+  if (byCreator) {
+    for (const [uid, n] of Object.entries(byCreator)) {
+      const c = Math.floor(Number(n));
+      if (uid && Number.isFinite(c) && c > 0) roomsByCreator.set(uid, c);
+    }
+  } else {
+    for (const r of customRooms.values()) {
+      if (r.createdBy) roomsByCreator.set(r.createdBy, (roomsByCreator.get(r.createdBy) || 0) + 1);
+    }
+  }
+  return restored;
+}
+if (dbStore) {
+  try {
+    const savedRooms = await dbStore.load('rooms');
+    if (savedRooms) {
+      const n = restoreRooms(savedRooms);
+      if (n) console.log(`Đã khôi phục ${n} phòng tự tạo từ Postgres.`);
+    }
+  } catch (e) {
+    console.error('Không tải được phòng tự tạo từ Postgres:', e.message);
+  }
+}
+// Lưu định kỳ mỗi 30 phút (v3.6): tài khoản + phòng tự tạo lên Postgres
+// (và file local) — ghi thưa để Neon ngủ giữa các lần ghi, đỡ tốn giờ chạy.
+{
+  const t = setInterval(() => { persistUsers(); persistRooms(); }, 30 * 60 * 1000);
+  if (t.unref) t.unref();
+}
 // Tin nhắn theo phòng: roomName -> [{id,userId,name,rank,text,time}]
 const roomMessages = new Map();
 // Người đang online theo phòng: roomName -> Map userId -> {id,name,rank,conns}
@@ -806,6 +939,7 @@ wss.on('connection', (ws) => {
         ROOMS[String(id)] = roomName;
         ROOMS[roomName] = roomName;
         ROOM_LABELS[roomName] = label;
+        persistRooms();
         wsBroadcastAll({ type: 'rooms', rooms: allRooms() });
         wsBroadcastRoomCounts();
         wsSend(ws, { type: 'room-created', room: roomName, label, id });
@@ -825,6 +959,7 @@ wss.on('connection', (ws) => {
         roomMessages.delete(roomName);
         roomMembers.delete(roomName);
         lotoByRoom.delete(roomName);
+        persistRooms();
         wsBroadcastAll({ type: 'rooms', rooms: allRooms() });
         wsBroadcastRoomCounts();
         wsBroadcast(roomName, { type: 'room-closed', room: roomName });
@@ -850,6 +985,7 @@ wss.on('connection', (ws) => {
         if (targetOrder <= senderOrder) return wsSend(ws, { type: 'error', code: 'forbidden', message: 'Chỉ cấp áo cho người dưới cấp bậc của bạn.' });
         if (RANK_ORDER[newRank] <= senderOrder) return wsSend(ws, { type: 'error', code: 'forbidden', message: 'Chỉ cấp áo thấp hơn áo của bạn.' });
         if (!setUserRank(users, targetId, newRank)) return wsSend(ws, { type: 'error', code: 'bad-user', message: 'Không đổi được cấp bậc.' });
+        persistUsers(); // v3.6: lưu cả lên Postgres (setUserRank chỉ ghi file)
         // Cập nhật rank cho các kết nối đang mở của người này (kể cả máy
         // khác) và rank trong presence của các phòng họ đang ở.
         const roomsOfTarget = new Set();
@@ -909,7 +1045,7 @@ wss.on('connection', (ws) => {
         }
         if (giver) giver.awardDaily = { date: today, total: used + amount };
         addPoints(target, amount);
-        saveUsers(users);
+        scheduleSave(); // v3.6: thưởng điểm lưu theo lô (tối đa 1 lần ghi / 5 giây)
         wsSendPoints(targetId);
         const rooms = new Set();
         for (const [roomName, m] of roomMembers) if (m.has(targetId)) rooms.add(roomName);
@@ -1070,6 +1206,7 @@ const server = http.createServer(async (req, res) => {
         livekitUrl: LIVEKIT_URL, time: new Date().toISOString(),
         ws: true, connections: wss.clients.size, rooms: allRooms().length,
         lotoRounds: lotoByRoom.size,
+        storage: storageMode, // v3.6: 'postgres' (Neon) hoặc 'file' (users.json)
         maintenance: MAINTENANCE, ...(MAINTENANCE ? { message: MAINTENANCE_MESSAGE } : {}),
       });
     }
@@ -1135,7 +1272,7 @@ const server = http.createServer(async (req, res) => {
         code: genCode(users, BOT_CODES), points: 0, daily: { date: todayVN(), points: 0 }, onlineMs: 0,
         ...(gender ? { gender } : {}),
       };
-      saveUsers(users);
+      persistUsers(); // v3.6: tài khoản mới lưu ngay (file + Postgres)
       return send(res, 201, {
         session: signSession({ id, name, rank: 'member' }),
         id, name, rank: 'member', expiresIn: SESSION_TTL,

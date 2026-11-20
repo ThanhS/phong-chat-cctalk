@@ -389,6 +389,36 @@ async function main() {
       check('v3.5 style lưu trong lịch sử chat', !!hst && hst.messages.find((m) => m.text === 'chữ đỏ cỡ 18')?.style?.size === 18);
       hist.ws.close();
 
+      // 15b. Style v3.7: cỡ nguyên 12-20, màu #ffff00, đậm/nghiêng/gạch chân.
+      await sleep(900);
+      a.ws.send(JSON.stringify({ type: 'message', room: '208', text: 'v37 cỡ 15', style: { color: '#2563eb', size: 15 } }));
+      const s15 = await waitFor(c.msgs, (m) => m.type === 'message' && m.msg?.text === 'v37 cỡ 15');
+      check('v3.7 cỡ 15 được giữ', !!s15 && s15.msg.style?.size === 15, JSON.stringify(s15?.msg));
+      await sleep(900);
+      a.ws.send(JSON.stringify({ type: 'message', room: '208', text: 'v37 cỡ 21', style: { color: '#2563eb', size: 21 } }));
+      const s21 = await waitFor(c.msgs, (m) => m.type === 'message' && m.msg?.text === 'v37 cỡ 21');
+      check('v3.7 cỡ 21 -> bỏ style', !!s21 && !s21.msg.style, JSON.stringify(s21?.msg));
+      await sleep(900);
+      a.ws.send(JSON.stringify({ type: 'message', room: '208', text: 'v37 cỡ 11', style: { color: '#2563eb', size: 11 } }));
+      const s11 = await waitFor(c.msgs, (m) => m.type === 'message' && m.msg?.text === 'v37 cỡ 11');
+      check('v3.7 cỡ 11 -> bỏ style', !!s11 && !s11.msg.style, JSON.stringify(s11?.msg));
+      await sleep(900);
+      a.ws.send(JSON.stringify({ type: 'message', room: '208', text: 'v37 vàng đậm nghiêng gạch', style: { color: '#FFFF00', size: 16, b: true, i: true, u: true } }));
+      const sbi = await waitFor(c.msgs, (m) => m.type === 'message' && m.msg?.text === 'v37 vàng đậm nghiêng gạch');
+      check('v3.7 #ffff00 + b/i/u được giữ + broadcast', !!sbi && sbi.msg.style?.color === '#ffff00' && sbi.msg.style?.b === true && sbi.msg.style?.i === true && sbi.msg.style?.u === true, JSON.stringify(sbi?.msg));
+      await sleep(900);
+      a.ws.send(JSON.stringify({ type: 'message', room: '208', text: 'v37 b không phải boolean', style: { color: '#2563eb', size: 14, b: 'yes' } }));
+      const sbn = await waitFor(c.msgs, (m) => m.type === 'message' && m.msg?.text === 'v37 b không phải boolean');
+      check('v3.7 b không phải boolean -> bỏ cả style', !!sbn && !sbn.msg.style, JSON.stringify(sbn?.msg));
+      const hist2 = await connect();
+      hist2.ws.send(JSON.stringify({ type: 'auth', token: cSession }));
+      await waitFor(hist2.msgs, (m) => m.type === 'auth-ok');
+      hist2.ws.send(JSON.stringify({ type: 'join', room: '208' }));
+      const hst2 = await waitFor(hist2.msgs, (m) => m.type === 'room-state');
+      const hm = hst2?.messages.find((m) => m.text === 'v37 vàng đậm nghiêng gạch');
+      check('v3.7 b/i/u + #ffff00 lưu trong lịch sử', !!hm && hm.style?.color === '#ffff00' && hm.style?.b === true && hm.style?.i === true && hm.style?.u === true, JSON.stringify(hm));
+      hist2.ws.close();
+
       // 16. Socket chết (không trả pong) + đóng đột ngột -> room-counts về đúng.
       await sleep(500);
       const base208 = () => { const l = c.msgs.filter((m) => m.type === 'room-counts').slice(-1)[0]; return l?.counts.find((x) => x.room === 'giao-luu-ket-ban')?.count; };

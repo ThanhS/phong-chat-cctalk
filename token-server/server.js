@@ -43,6 +43,9 @@
 // khoản + phòng tự tạo lưu vào bảng kv (xem db.js) nên không mất khi máy
 // chủ khởi động lại; vẫn ghi file data/users.json làm bản sao local. Không
 // có DATABASE_URL (hoặc nối DB lỗi lúc khởi động) thì lưu file như cũ.
+// V3.7: style chữ chat mở rộng — thêm màu vàng #ffff00, cỡ chữ mọi số
+// nguyên 12-20 (trước chỉ 12/14/16/18/20), thêm in đậm/in nghiêng/gạch
+// chân (b/i/u, chỉ lưu khi true).
 
 import http from 'node:http';
 import crypto from 'node:crypto';
@@ -71,8 +74,8 @@ const ONLINE_POINTS_DEFAULT = 10;
 const VOTE_COOLDOWN_MS = 5_000;          // mỗi cặp người vote -> người nhận
 const VOTE_MAX_PER_HOUR = 60;            // mỗi người vote tối đa 60 lần được tính / giờ
 const AWARD_LIMITS = { qtv: { per: 100, day: 1000 }, 'bdh-den': { per: 50, day: 300 } };
-const STYLE_COLORS = new Set(['#1f2937', '#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#0d9488', '#2563eb', '#7c3aed', '#db2777', '#92400e', '#475569', '#000000']);
-const STYLE_SIZES = new Set([12, 14, 16, 18, 20]);
+const STYLE_COLORS = new Set(['#1f2937', '#dc2626', '#ea580c', '#ca8a04', '#ffff00', '#16a34a', '#0d9488', '#2563eb', '#7c3aed', '#db2777', '#92400e', '#475569', '#000000']);
+const STYLE_SIZE_MIN = 12, STYLE_SIZE_MAX = 20; // (v3.7) mọi số nguyên trong khoảng này
 
 
 const {
@@ -466,7 +469,9 @@ const roomsByCreator = new Map(); // userId -> count
 //     {type:'set-rank', userId, rank}   — cấp áo BĐH đồng bộ (v3.4): QTV/đen/vàng
 //                                          cấp áo thấp hơn áo mình cho người dưới mình;
 //                                          rank 'member' = gỡ áo; không cấp được 'qtv'
-//     {type:'message', ..., style:{color,size}} — (v3.5) màu/cỡ chữ tùy chọn; sai whitelist -> bỏ style
+//     {type:'message', ..., style:{color,size,b?,i?,u?}} — màu/cỡ chữ tùy chọn (v3.5;
+//                                          v3.7: size nguyên 12-20, thêm đậm/nghiêng/gạch chân);
+//                                          sai whitelist -> bỏ style
 //     {type:'vote', room, userId}       — (v3.5) thả tim người đang lên mic: +1 điểm; cooldown 5s/cặp,
 //                                          tối đa 60 vote tính/giờ/người; vi phạm -> bỏ qua im lặng
 //     {type:'award', userId, amount}    — (v3.5) thưởng điểm: QTV 1-100/lần (1000/ngày), BĐH đen 1-50/lần
@@ -737,12 +742,20 @@ const voteBuckets = new Map(); // voter -> { count, start }
   if (t.unref) t.unref();
 }
 // Chuẩn hóa style chữ chat: sai -> null (bỏ style, không báo lỗi).
+// (v3.7) size: mọi số nguyên 12-20; b/i/u (đậm/nghiêng/gạch chân) tùy chọn,
+// chỉ lưu khi true; có mặt mà không phải boolean -> bỏ cả style.
 function cleanStyle(style) {
   if (!style || typeof style !== 'object') return null;
   const color = style.color === undefined ? '#1f2937' : String(style.color).toLowerCase();
   const size = style.size === undefined ? 14 : Number(style.size);
-  if (!STYLE_COLORS.has(color) || !STYLE_SIZES.has(size)) return null;
-  return { color, size };
+  if (!STYLE_COLORS.has(color) || !Number.isInteger(size) || size < STYLE_SIZE_MIN || size > STYLE_SIZE_MAX) return null;
+  const out = { color, size };
+  for (const k of ['b', 'i', 'u']) {
+    if (style[k] === undefined) continue;
+    if (typeof style[k] !== 'boolean') return null;
+    if (style[k]) out[k] = true;
+  }
+  return out;
 }
 
 // ---- Lô Tô chung giữa các máy (v3.2) --------------------------------------

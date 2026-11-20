@@ -137,13 +137,13 @@
       .member.role-bdh .mname{color:#14181c;font-weight:800;}
       .member.g-male .mname{color:#1668c4;font-weight:600;}
       .member.g-female .mname{color:#d6337f;font-weight:600;}
-      .member.grant-yellow .mname{color:#9a6f00;}
+      .member.grant-yellow .mname{color:#FFFF00;text-shadow:0 0 3px rgba(96,80,0,.38),0 0 1px rgba(96,80,0,.45);}
       .member.grant-purple .mname{color:#7b3fc4;}
       @media (prefers-color-scheme: dark){
         .member.role-bdh .mname{color:#eef3f7;}
         .member.g-male .mname{color:#7cc0ff;}
         .member.g-female .mname{color:#ff9ecb;}
-        .member.grant-yellow .mname{color:#ffd34d;}
+        .member.grant-yellow .mname{color:#FFFF00;text-shadow:0 0 3px rgba(0,0,0,.35);}
         .member.grant-purple .mname{color:#cfa6f5;}
       }
       .gender-ico{width:24px;height:24px;border-radius:6px;flex:none;display:grid;place-items:center;}
@@ -153,7 +153,7 @@
       /* Màu áo theo vai trò: ADMIN đỏ, BĐH đen, cấp màu vàng / tím cho BĐH */
       .gender-ico.tile-admin{background:var(--red);color:#fff;}
       .gender-ico.tile-bdh{background:#191919;color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);}
-      .gender-ico.tile-yellow{background:#f5b921;color:#4a3200;}
+      .gender-ico.tile-yellow{background:#FFFF00;color:#4a3200;box-shadow:inset 0 0 0 1px rgba(120,100,0,.35);}
       .gender-ico.tile-purple{background:#7b3fc4;color:#fff;}
       .member .tag{flex:none;font-size:.64rem;font-weight:800;padding:.1rem .4rem;border-radius:4px;background:#fdeceb;color:var(--red);border:1px solid #f5c6c0;}
       .member .tag.vip{background:#fff4d6;color:#9a6a00;border-color:#ecd28a;}
@@ -163,11 +163,22 @@
       /* Logo BĐH — hiện khi áo vàng / áo tím được áo đen (hoặc QTV) cấp quyền áo */
       .member .tag.bdh-logo{display:inline-flex;align-items:center;gap:.22rem;background:#191919;color:#fff;border-color:#191919;}
       .member .tag.bdh-logo svg{flex:none;}
-      .member .tag.bdh-logo.yellow{background:#f5b921;color:#4a3200;border-color:#d9a92c;}
+      .member .tag.bdh-logo.yellow{background:#FFFF00;color:#4a3200;border-color:#c9c900;}
       .member .tag.bdh-logo.purple{background:#7b3fc4;color:#fff;border-color:#7b3fc4;}
       /* Tag BOT xám nhỏ — chỉ hiện cho thành viên bot do MÁY CHỦ gửi (chế độ máy chủ thật) */
       .member .tag.bot{background:#eef1f3;color:#66707a;border-color:#cfd6dc;letter-spacing:.04em;}
       .msg .tag-bot{font-size:.6rem;font-weight:800;background:#eef1f3;color:#66707a;border:1px solid #cfd6dc;border-radius:4px;padding:.05rem .3rem;letter-spacing:.04em;vertical-align:1px;}
+      /* Huy hiệu Lv + chức danh cạnh tên người gửi trong dòng chat — giống hệt danh sách thành viên */
+      .msg .who{display:inline-flex;align-items:center;gap:.35rem;flex-wrap:wrap;}
+      .msg .lv-badge{font-size:.6rem;padding:.06rem .36rem;}
+      .msg .chat-tag{flex:none;font-size:.64rem;font-weight:800;padding:.1rem .4rem;border-radius:4px;border:1px solid transparent;line-height:1.35;vertical-align:1px;}
+      .msg .chat-tag.qtv{background:var(--red);color:#fff;border-color:var(--red);}
+      .msg .chat-tag.bdh-black{background:#191919;color:#fff;border-color:#191919;}
+      .msg .chat-tag.bdh-logo{display:inline-flex;align-items:center;gap:.22rem;background:#191919;color:#fff;border-color:#191919;}
+      .msg .chat-tag.bdh-logo svg{flex:none;}
+      .msg .chat-tag.bdh-logo.yellow{background:#FFFF00;color:#4a3200;border-color:#c9c900;}
+      .msg .chat-tag.bdh-logo.purple{background:#7b3fc4;color:#fff;border-color:#7b3fc4;}
+      .msg .chat-name-yellow{color:#FFFF00!important;text-shadow:0 0 3px rgba(96,80,0,.38),0 0 1px rgba(96,80,0,.45);}
       /* Thanh trạng thái kết nối máy chủ chat (hub WebSocket) — gọn, ngay trên khung chat */
       .hub-status{display:flex;align-items:center;gap:.45rem;padding:.32rem .9rem;font-size:.78rem;font-weight:600;color:var(--muted);background:var(--panel-2);border-bottom:1px solid var(--line);}
       .hub-dot{flex:none;width:9px;height:9px;border-radius:50%;background:#c0392b;box-shadow:0 0 0 3px rgba(192,57,43,.15);}
@@ -263,8 +274,16 @@
       .swatch{width:100%;aspect-ratio:1;border-radius:8px;border:2px solid var(--line);cursor:pointer;min-height:0;padding:0;}
       .swatch.sel{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-soft);}
       .size-row{display:flex;gap:.35rem;flex-wrap:wrap;}
-      .size-btn{flex:1;border:1.5px solid var(--line);background:var(--panel-2);color:var(--ink);border-radius:8px;padding:.3rem 0;font-weight:800;min-height:2rem;}
-      .size-btn.sel{background:var(--blue);color:#fff;border-color:var(--blue);}
+      .fmt-row{display:flex;gap:.35rem;margin-bottom:.55rem;}
+      .fmt-btn{flex:1;border:1.5px solid var(--line);background:var(--panel-2);color:var(--ink);border-radius:8px;padding:.3rem 0;font-size:1rem;min-height:2.25rem;line-height:1;}
+      .fmt-btn[data-fmt="b"]{font-weight:800;}
+      .fmt-btn[data-fmt="i"]{font-style:italic;font-family:Georgia,serif;}
+      .fmt-btn[data-fmt="u"]{text-decoration:underline;}
+      .fmt-btn.sel{background:var(--blue);color:#fff;border-color:var(--blue);}
+      .size-slider-row{display:flex;align-items:center;gap:.6rem;}
+      .size-slider-row input[type=range]{flex:1;min-width:0;accent-color:var(--blue);min-height:36px;}
+      .size-slider-val{flex:none;min-width:2.4ch;text-align:right;font-weight:800;font-size:1rem;font-variant-numeric:tabular-nums;color:var(--ink);}
+      .size-slider-unit{flex:none;font-size:.78rem;font-weight:700;color:var(--muted);}
       .composer .tool.aa{font-weight:800;font-size:.95rem;color:var(--ink);width:auto;padding:0 .7rem;border-radius:999px;}
       .composer .tool.aa.sel{border-color:var(--blue);color:var(--blue-deep);background:var(--blue-soft);}
       /* Thanh trượt âm lượng mic / loa trên thanh voice */
@@ -890,7 +909,6 @@
       <div class="login-card">
         <h2 id="mmTitle">Thông tin thành viên</h2>
         <div class="profile-card" id="mmProfile" style="margin-bottom:.4rem;"></div>
-        <p id="mmDesc"></p>
         <label for="mmName">Tên hiển thị trong phòng</label>
         <input type="text" id="mmName" maxlength="24" placeholder="Ví dụ: ThanhS" />
         <label for="mmGender">Giới tính — quyết định ký hiệu và màu tên</label>
@@ -914,7 +932,6 @@
             <button class="mod-btn" id="mmAddQueue" type="button">Thêm vào xếp hàng</button>
             <button class="mod-btn danger" id="mmRemoveQueue" type="button">Xóa khỏi xếp hàng</button>
           </div>
-          <div style="font-size:.8rem;color:var(--muted);margin-top:.5rem;line-height:1.45;" id="mmModHint"></div>
         </div>
         <div class="award-box" id="mmAwardWrap" style="display:none;">
           <div class="mod-title" style="font-size:.8rem;font-weight:800;letter-spacing:.03em;margin-bottom:.55rem;">THƯỞNG ĐIỂM</div>
@@ -1160,11 +1177,20 @@
 
           <div class="composer">
             <div class="emoji-pop" id="emojiPop"></div>
-            <div class="style-pop" id="stylePop" aria-label="Chọn màu chữ và cỡ chữ">
+            <div class="style-pop" id="stylePop" aria-label="Chọn màu chữ, định dạng và cỡ chữ">
               <div class="sp-title">MÀU CHỮ CỦA BẠN</div>
               <div class="swatches" id="styleSwatches"></div>
+              <div class="sp-title">ĐỊNH DẠNG</div>
+              <div class="fmt-row" id="styleFormats">
+                <button type="button" class="fmt-btn" data-fmt="b" title="In đậm" aria-label="In đậm" aria-pressed="false">B</button>
+                <button type="button" class="fmt-btn" data-fmt="i" title="In nghiêng" aria-label="In nghiêng" aria-pressed="false">I</button>
+                <button type="button" class="fmt-btn" data-fmt="u" title="Gạch chân" aria-label="Gạch chân" aria-pressed="false">U</button>
+              </div>
               <div class="sp-title">CỠ CHỮ</div>
-              <div class="size-row" id="styleSizes"></div>
+              <div class="size-slider-row">
+                <input type="range" id="styleSizeRange" min="12" max="20" step="1" value="14" aria-label="Cỡ chữ từ 12 đến 20" />
+                <span class="size-slider-val" id="styleSizeVal">14</span><span class="size-slider-unit">px</span>
+              </div>
             </div>
             <button class="tool aa" id="styleBtn" type="button" aria-label="Đổi màu chữ và cỡ chữ" title="Đổi màu chữ + cỡ chữ của tin nhắn bạn gửi">Aa</button>
             <button class="tool" id="emojiBtn" aria-label="Chèn biểu cảm">
@@ -1608,33 +1634,61 @@
         }).catch(function(){ done(false, null); });
       }
 
-      /* ================= Màu chữ + cỡ chữ chat (mục 3 của SPEC v3.5) ================= */
-      var CHAT_COLORS = ["#1f2937", "#dc2626", "#ea580c", "#ca8a04", "#16a34a", "#0d9488", "#2563eb", "#7c3aed", "#db2777", "#92400e", "#475569", "#000000"];
-      var CHAT_SIZES = [12, 14, 16, 18, 20];
-      var chatStyle = { color: "#1f2937", size: 14 };
+      /* ================= Màu chữ + cỡ chữ + định dạng chat =================
+         Màu vàng trong bảng Aa đúng mã #FFFF00 (thay #ca8a04 cũ). Cỡ chữ
+         là MỌI số nguyên 12–20 (thanh kéo), không còn 5 nút cố định.
+         Định dạng B/I/U: chỉ gửi field true kèm style {color,size,b,i,u}. */
+      var CHAT_COLORS = ["#1f2937", "#dc2626", "#ea580c", "#ffff00", "#16a34a", "#0d9488", "#2563eb", "#7c3aed", "#db2777", "#92400e", "#475569", "#000000"];
+      var chatStyle = { color: "#1f2937", size: 14, b: false, i: false, u: false };
       try{
         var savedStyle = JSON.parse(localStorage.getItem("cctalk.chatStyle") || "null");
         if(savedStyle){
-          if(CHAT_COLORS.indexOf(savedStyle.color) >= 0) chatStyle.color = savedStyle.color;
-          if(CHAT_SIZES.indexOf(parseInt(savedStyle.size, 10)) >= 0) chatStyle.size = parseInt(savedStyle.size, 10);
+          var sc = String(savedStyle.color || "").toLowerCase();
+          if(sc === "#ca8a04") sc = "#ffff00";
+          if(CHAT_COLORS.indexOf(sc) >= 0) chatStyle.color = sc;
+          var ss = parseInt(savedStyle.size, 10);
+          if(!isNaN(ss) && ss >= 12 && ss <= 20) chatStyle.size = ss;
+          chatStyle.b = savedStyle.b === true;
+          chatStyle.i = savedStyle.i === true;
+          chatStyle.u = savedStyle.u === true;
         }
       }catch(e){}
       function saveChatStyle(){ try{ localStorage.setItem("cctalk.chatStyle", JSON.stringify(chatStyle)); }catch(e){} }
       function validMsgStyle(st){
         if(!st || typeof st !== "object") return null;
+        var out = {};
         var c = String(st.color || "").toLowerCase();
+        if(c === "#ca8a04") c = "#ffff00";
+        if(CHAT_COLORS.indexOf(c) >= 0) out.color = c;
         var s = parseInt(st.size, 10);
-        if(CHAT_COLORS.indexOf(c) < 0 || CHAT_SIZES.indexOf(s) < 0) return null;
-        return { color: c, size: s };
+        if(!isNaN(s) && s >= 12 && s <= 20) out.size = s;
+        if(st.b === true || st.b === 1) out.b = true;
+        if(st.i === true || st.i === 1) out.i = true;
+        if(st.u === true || st.u === 1) out.u = true;
+        return (out.color || out.size || out.b || out.i || out.u) ? out : null;
+      }
+      function currentChatStylePayload(){
+        var s = { color: chatStyle.color, size: chatStyle.size };
+        if(chatStyle.b) s.b = true;
+        if(chatStyle.i) s.i = true;
+        if(chatStyle.u) s.u = true;
+        return s;
       }
       function msgTextStyleAttr(st){
         var v = validMsgStyle(st); if(!v) return "";
-        var color = v.color;
-        /* Dark theme: màu mặc định / đen thuần đọc không được trên nền tối
-           -> dùng màu chữ mặc định của theme */
-        var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-        if(dark && (color === "#1f2937" || color === "#000000")) color = "var(--ink)";
-        return ' style="color:' + color + ';font-size:' + v.size + 'px"';
+        var parts = [];
+        if(v.color){
+          var color = v.color;
+          var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if(dark && (color === "#1f2937" || color === "#000000")) color = "var(--ink)";
+          parts.push("color:" + color);
+          if(v.color === "#ffff00") parts.push("text-shadow:0 0 3px rgba(96,80,0,.38),0 0 1px rgba(96,80,0,.45)");
+        }
+        if(v.size) parts.push("font-size:" + v.size + "px");
+        if(v.b) parts.push("font-weight:800");
+        if(v.i) parts.push("font-style:italic");
+        if(v.u) parts.push("text-decoration:underline");
+        return parts.length ? ' style="' + parts.join(";") + '"' : "";
       }
 
       /* ================= Âm lượng mic (gain) + loa =================
@@ -1735,7 +1789,8 @@
         var isMe = !!(state.userId && gm.userId === state.userId);
         var cls = gm.bot ? (gm.gender === "F" ? "c-purple" : "c-blue") : CLASSES[hueFromId(gm.userId || gm.name) % CLASSES.length];
         var t = gm.time ? new Date(gm.time) : new Date();
-        return { type:"msg", name: gm.name, text: gm.text, cls: cls, style: validMsgStyle(gm.style), time: isNaN(t.getTime()) ? timeNow() : t.toLocaleTimeString("en-US", {hour:"numeric", minute:"2-digit", second:"2-digit", hour12:true}), me: isMe, bot: !!gm.bot };
+        var prof = gm.profile || gm.user || {};
+        return { type:"msg", name: gm.name, text: gm.text, cls: cls, style: validMsgStyle(gm.style), time: isNaN(t.getTime()) ? timeNow() : t.toLocaleTimeString("en-US", {hour:"numeric", minute:"2-digit", second:"2-digit", hour12:true}), me: isMe, bot: !!gm.bot, srvId: gm.userId || gm.id || prof.id || null, userId: gm.userId || prof.id || null, rank: gm.rank || prof.rank || null, srvRank: gm.rank || prof.rank || null, grant: gm.grant || prof.grant || null, level: (gm.level != null ? gm.level : (prof.level != null ? prof.level : null)), points: (gm.points != null ? gm.points : (prof.points != null ? prof.points : null)), code: (gm.code != null ? gm.code : (prof.code != null ? prof.code : null)) };
       }
       function hubApplyRoomState(d){
         var r = hubRoomBySlug(d.room); if(!r) return;
@@ -2367,7 +2422,7 @@
         return '<div class="'+cls+'" data-member="'+esc(m.name)+'" data-mroom="'+roomId+'" title="Thẻ hồ sơ của ' + esc(m.name) + ' — rê chuột để xem nhanh, bấm để mở chi tiết">'
           + genderHTML(m.gender, tile)
           + '<span class="mic'+(micOn?" on":"")+'">'+(micOn?micSVG:micOffSVG)+"</span>"
-          + '<span class="mname"><span class="mname-text">'+esc(m.name)+(m.me?" (Bạn)":"")+'</span><span class="lv-badge" title="Cấp bậc '+profileOfMember(m).level+' — '+profileOfMember(m).points+' điểm thành viên">Lv '+profileOfMember(m).level+"</span></span>"
+          + '<span class="mname"><span class="lv-badge" title="Cấp bậc '+profileOfMember(m).level+' — '+profileOfMember(m).points+' điểm thành viên">Lv '+profileOfMember(m).level+'</span><span class="mname-text">'+esc(m.name)+(m.me?" (Bạn)":"")+"</span></span>"
           + '<span class="tagzone">'+tag+"</span>" + micUp + "</div>";
       }
       function sortedMembers(members){
@@ -2420,6 +2475,70 @@
       }
 
       /* ================= Render: messages ================= */
+      /* Huy hiệu cho dòng chat: Lv TRƯỚC tên, rồi tên, rồi huy hiệu chức
+         danh (QTV / BĐH) hoặc BOT — giống hệt thứ tự danh sách thành viên.
+         Ưu tiên profile máy chủ gửi kèm tin (rank/level), không có thì
+         tra thành viên cùng tên / cùng srvId trong phòng hiện tại, cuối
+         cùng dùng hồ sơ giả lập xác định theo tên (chế độ demo). */
+      function msgMemberLookup(m){
+        var r = null;
+        try{ r = currentRoom(); }catch(e){}
+        if(!r || !r.members) return null;
+        var uid = m.srvId || m.userId || null;
+        if(uid){
+          var byId = r.members.filter(function(x){ return x.srvId === uid || x.loginId === uid; })[0];
+          if(byId) return byId;
+        }
+        if(m.me){
+          var meM = r.members.filter(function(x){ return x.me; })[0];
+          if(meM) return meM;
+        }
+        return r.members.filter(function(x){ return x.name === m.name; })[0] || null;
+      }
+      function msgBadgesHTML(m){
+        var mem = msgMemberLookup(m);
+        var lvl = null;
+        if(m.level != null && !isNaN(parseInt(m.level, 10))) lvl = parseInt(m.level, 10);
+        else if(mem) lvl = profileOfMember(mem).level;
+        else lvl = fakeProfile(m.srvId || m.userId || m.name || "user").level;
+        var lv = '<span class="lv-badge" title="Cấp bậc ' + lvl + '">Lv ' + lvl + '</span>';
+        var role = "";
+        if(m.bot){
+          role = ' <span class="tag-bot">BOT</span>';
+        } else {
+          var rk = null, gr = null;
+          var srvRk = String(m.srvRank || m.rank || "").toLowerCase();
+          if(srvRk === "qtv" || srvRk === "bdh-den" || srvRk === "bdh-vang" || srvRk === "bdh-tim") rk = srvRk;
+          if(m.grant === "yellow" || m.grant === "purple") gr = m.grant;
+          if(mem){
+            if(mem.tag === "ADMIN" || mem.tag === "QTV" || (mem.me && typeof isAdmin === "function" && isAdmin())) rk = "qtv";
+            else if(mem.grant === "yellow"){ rk = "bdh-vang"; gr = "yellow"; }
+            else if(mem.grant === "purple"){ rk = "bdh-tim"; gr = "purple"; }
+            else if(mem.tag === "BĐH") rk = "bdh-den";
+            else if(!rk && mem.me && typeof state !== "undefined"){
+              if(state.grant === "yellow"){ rk = "bdh-vang"; gr = "yellow"; }
+              else if(state.grant === "purple"){ rk = "bdh-tim"; gr = "purple"; }
+              else if(state.memberTag === "BĐH") rk = "bdh-den";
+            }
+          } else if(m.me && typeof state !== "undefined"){
+            if(typeof isAdmin === "function" && isAdmin()) rk = "qtv";
+            else if(state.grant === "yellow"){ rk = "bdh-vang"; gr = "yellow"; }
+            else if(state.grant === "purple"){ rk = "bdh-tim"; gr = "purple"; }
+            else if(state.memberTag === "BĐH") rk = "bdh-den";
+          }
+          if(rk === "bdh-vang" && !gr) gr = "yellow";
+          if(rk === "bdh-tim" && !gr) gr = "purple";
+          if(rk === "qtv") role = ' <span class="chat-tag qtv">QTV</span>';
+          else if(rk === "bdh-vang" || rk === "bdh-tim") role = ' <span class="chat-tag bdh-logo ' + gr + '">' + shieldSVG + 'BĐH</span>';
+          else if(rk === "bdh-den") role = ' <span class="chat-tag bdh-black">BĐH</span>';
+        }
+        var nameCls = "";
+        if(!m.bot){
+          var isYellow = (mem && mem.grant === "yellow") || gr === "yellow" || String(m.srvRank || m.rank || "").toLowerCase() === "bdh-vang";
+          if(isYellow) nameCls = ' class="chat-name-yellow"';
+        }
+        return { lv: lv, role: role, nameCls: nameCls };
+      }
       function msgHTML(m){
         if(m.type==="sys"){
           /* Dòng thông báo hệ thống: không hiển thị trong khung chat nữa */
@@ -2428,11 +2547,14 @@
         if(m.type==="announce"){
           return '<div class="announce'+(m.awarded?" awarded":"")+'"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10v4a1 1 0 0 0 1 1h2l4 4.5c.8.9 2 .3 2-.9V5.3c0-1.2-1.2-1.8-2-.9L6 9H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg><span>'+esc(m.text)+"</span></div>";
         }
-        /* Tin có style riêng (màu + cỡ chữ người gửi chọn): hiển thị đúng
-           style đó cho mọi người; không có style thì dùng màu lớp cũ */
+        /* Tin có style riêng (màu + cỡ + B/I/U người gửi chọn): hiển thị
+           đúng style đó cho mọi người; không có style thì dùng màu lớp cũ.
+           Cạnh tên luôn hiện Lv (trước tên) + huy hiệu chức danh / BOT. */
+        var bd = msgBadgesHTML(m);
+        var who = '<span class="who">' + bd.lv + ' <b' + bd.nameCls + '>' + esc(m.name) + "</b>" + bd.role + " " + esc(m.time) + '</span>';
         var stAttr = m.style ? msgTextStyleAttr(m.style) : "";
-        if(stAttr) return '<div class="msg'+(m.me?" me":"")+'"><span class="who"><b>'+esc(m.name)+"</b>"+(m.bot?' <span class="tag-bot">BOT</span>':"")+" "+esc(m.time)+'</span><br/><span class="text"'+stAttr+'>'+esc(m.text)+"</span></div>";
-        return '<div class="msg'+(m.me?" me":"")+'"><span class="who"><b>'+esc(m.name)+"</b>"+(m.bot?' <span class="tag-bot">BOT</span>':"")+" "+esc(m.time)+'</span><br/><span class="text '+(m.cls||"c-plain")+'">'+esc(m.text)+"</span></div>";
+        if(stAttr) return '<div class="msg'+(m.me?" me":"")+'">' + who + '<br/><span class="text"'+stAttr+'>'+esc(m.text)+"</span></div>";
+        return '<div class="msg'+(m.me?" me":"")+'">' + who + '<br/><span class="text '+(m.cls||"c-plain")+'">'+esc(m.text)+"</span></div>";
       }
       function renderMessages(){
         var box = $("messages");
@@ -2939,8 +3061,6 @@
           aq.textContent = onStage ? "Đang ở trên mic" : inQ ? "Đã có trong xếp hàng" : "Thêm vào xếp hàng";
           aq.disabled = !canAdd; aq.style.opacity = canAdd ? "1" : ".55";
         }
-        var hint = $("mmModHint");
-        if(hint) hint.textContent = "Phân quyền: QTV đỏ (cao nhất) > BĐH đen > BĐH vàng > BĐH tím > thành viên thường. Bạn là " + rankName(viewerRankInRoom(r)) + " — chỉ cấm chat / khóa mic được người đứng dưới cấp của mình: đỏ cấm được tất cả, đen không cấm được đỏ, vàng không cấm được đỏ + đen, tím không cấm được đỏ + đen + vàng. Thêm vào xếp hàng thì QTV và mọi BĐH đều làm được.";
       }
       /* Thẻ hồ sơ nổi: hiện cạnh hàng thành viên khi rê chuột (desktop);
          trên điện thoại thì bấm vào tên mở cửa sổ thành viên — trong đó
@@ -2992,10 +3112,6 @@
             : "Bạn là BĐH (áo đen): thưởng 1–" + awardMax + " điểm/lần cho người dưới cấp mình, tối đa 300 điểm/ngày. Điểm cộng thẳng vào điểm thành viên + điểm tích lũy hôm nay của " + m.name + ".";
         }
         $("mmTitle").textContent = "Thành viên: " + m.name;
-        $("mmDesc").textContent = "Vai trò hiện tại: " + memberRoleLabel(m) + "."
-          + (canEdit ? "" : " Chỉ QTV hoặc chính người đó mới đổi được tên và giới tính.")
-          + (canGrant && !canEdit ? " Bạn có quyền cấp áo cho thành viên này ở mục bên dưới." : "")
-          + (canMod ? " Bạn có quyền cấm chat / khóa mic thành viên này ở khung phía dưới (vì họ đứng dưới cấp của bạn)." : (showMod ? " Bạn KHÔNG cấm chat / khóa mic được thành viên này vì họ ngang hoặc trên cấp của bạn — nhưng vẫn Thêm vào xếp hàng được." : ""));
         $("mmName").value = m.name;
         $("mmGender").value = m.gender || "M";
         $("mmName").disabled = !canEdit;
@@ -3028,7 +3144,6 @@
         if(r.id===state.roomId) sysHere(state.user + (m.chatBanned ? " đã cấm chat " : " đã mở chat lại cho ") + m.name);
         toast(m.chatBanned ? "Đã cấm chat " + m.name : "Đã mở chat lại cho " + m.name);
         refreshModButtons(); renderRoomList();
-        var d = $("mmDesc"); if(d) d.textContent = "Vai trò hiện tại: " + memberRoleLabel(m) + ".";
       });
       $("mmBanMic").addEventListener("click", function(){
         if(!editingMemberRef || !editingMemberRef.canMod) return;
@@ -3042,7 +3157,6 @@
         if(r.id===state.roomId) sysHere(state.user + (m.micBanned ? " đã cấm mic " : " đã mở mic lại cho ") + m.name);
         toast(m.micBanned ? "Đã cấm mic " + m.name : "Đã mở mic lại cho " + m.name);
         refreshModButtons(); renderRoomList(); renderQueue(); updateNowSpeaking();
-        var d = $("mmDesc"); if(d) d.textContent = "Vai trò hiện tại: " + memberRoleLabel(m) + ".";
       });
       $("mmRemoveQueue").addEventListener("click", function(){
         if(!editingMemberRef || !editingMemberRef.canMod) return;
@@ -3528,7 +3642,7 @@
            mới hiện trong khung chat (không tự hiện tin của mình trước)
            để mọi máy thấy giống hệt nhau */
         if(hubActive()){
-          if(hubSend({ type:"message", room: state.roomId, text: text, style: { color: chatStyle.color, size: chatStyle.size } })){
+          if(hubSend({ type:"message", room: state.roomId, text: text, style: currentChatStylePayload() })){
             state.lastCommentAt[state.roomId] = Date.now();
             inp.value = "";
             sfx("send");
@@ -3538,7 +3652,7 @@
           }
           return;
         }
-        addMessage(state.roomId, {type:"msg", name: state.user, text:text, cls:"c-plain", style: { color: chatStyle.color, size: chatStyle.size }, time: timeNow(), me:true}, {sound:"send"});
+        addMessage(state.roomId, {type:"msg", name: state.user, text:text, cls:"c-plain", style: currentChatStylePayload(), time: timeNow(), me:true}, {sound:"send"});
         state.lastCommentAt[state.roomId] = Date.now();
         inp.value = "";
         if(Math.random() < 0.55){
@@ -3571,16 +3685,23 @@
       $("emojiBtn").addEventListener("click", function(e){ e.stopPropagation(); $("emojiPop").classList.toggle("show"); });
       document.addEventListener("click", function(e){ if(!$("emojiPop").contains(e.target)) $("emojiPop").classList.remove("show"); });
 
-      /* Bảng chọn màu chữ + cỡ chữ (nút Aa): 12 màu whitelist + 5 cỡ
-         12–20 theo SPEC v3.5; lựa chọn lưu trên máy này và gửi kèm mỗi
-         tin nhắn (style) để mọi máy thấy đúng màu/cỡ của người gửi */
+      /* Bảng Aa: 12 màu whitelist (vàng = #FFFF00) + 3 nút B/I/U +
+         thanh kéo cỡ chữ 12–20 (bước 1, hiện số hiện tại). Lựa chọn lưu
+         trên máy này và gửi kèm mỗi tin nhắn (style) để mọi máy thấy
+         đúng màu / cỡ / định dạng của người gửi. */
       (function buildStylePicker(){
-        var sw = $("styleSwatches"), sz = $("styleSizes");
-        if(!sw || !sz) return;
+        var sw = $("styleSwatches"), range = $("styleSizeRange"), rangeVal = $("styleSizeVal"), fmtRow = $("styleFormats");
+        if(!sw || !range) return;
         function paint(){
           sw.querySelectorAll(".swatch").forEach(function(b){ b.classList.toggle("sel", b.getAttribute("data-color") === chatStyle.color); });
-          sz.querySelectorAll(".size-btn").forEach(function(b){ b.classList.toggle("sel", parseInt(b.getAttribute("data-size"), 10) === chatStyle.size); });
-          var btn = $("styleBtn"); if(btn) btn.classList.toggle("sel", chatStyle.color !== "#1f2937" || chatStyle.size !== 14);
+          if(range.value !== String(chatStyle.size)) range.value = String(chatStyle.size);
+          if(rangeVal) rangeVal.textContent = String(chatStyle.size);
+          if(fmtRow) fmtRow.querySelectorAll(".fmt-btn").forEach(function(b){
+            var on = !!chatStyle[b.getAttribute("data-fmt")];
+            b.classList.toggle("sel", on);
+            b.setAttribute("aria-pressed", on ? "true" : "false");
+          });
+          var btn = $("styleBtn"); if(btn) btn.classList.toggle("sel", chatStyle.color !== "#1f2937" || chatStyle.size !== 14 || chatStyle.b || chatStyle.i || chatStyle.u);
         }
         CHAT_COLORS.forEach(function(c){
           var b = document.createElement("button");
@@ -3589,13 +3710,20 @@
           b.addEventListener("click", function(){ chatStyle.color = c; saveChatStyle(); paint(); $("chatInput").focus(); });
           sw.appendChild(b);
         });
-        CHAT_SIZES.forEach(function(s){
-          var b = document.createElement("button");
-          b.type = "button"; b.className = "size-btn"; b.textContent = s; b.style.fontSize = Math.min(s, 18) + "px"; b.setAttribute("data-size", String(s));
-          b.title = "Cỡ chữ " + s; b.setAttribute("aria-label", "Chọn cỡ chữ " + s);
-          b.addEventListener("click", function(){ chatStyle.size = s; saveChatStyle(); paint(); $("chatInput").focus(); });
-          sz.appendChild(b);
+        if(fmtRow) fmtRow.querySelectorAll(".fmt-btn").forEach(function(b){
+          b.addEventListener("click", function(){
+            var k = b.getAttribute("data-fmt");
+            chatStyle[k] = !chatStyle[k];
+            saveChatStyle(); paint(); $("chatInput").focus();
+          });
         });
+        range.addEventListener("input", function(){
+          var v = parseInt(range.value, 10);
+          if(isNaN(v)) return;
+          chatStyle.size = Math.max(12, Math.min(20, v));
+          saveChatStyle(); paint();
+        });
+        range.addEventListener("change", function(){ $("chatInput").focus(); });
         paint();
         $("styleBtn").addEventListener("click", function(e){
           e.stopPropagation();

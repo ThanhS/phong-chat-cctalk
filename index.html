@@ -609,8 +609,9 @@
       .login-card h2{font-size:1.2rem;margin:.2rem 0 .3rem;}
       .login-card p{color:var(--muted);font-size:.92rem;margin:.2rem 0 1rem;line-height:1.5;}
       .login-card label{font-weight:700;font-size:.88rem;display:block;margin:.8rem 0 .35rem;}
-      .login-card input[type=text],.login-card input[type=password]{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:.6rem .75rem;font-size:1rem;background:var(--panel);color:var(--ink);}
-      .login-card input[type=text]:focus,.login-card input[type=password]:focus{outline:2px solid var(--blue);border-color:var(--blue);}
+      .login-card input[type=text],.login-card input[type=password],.login-card input[type=number]{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:.6rem .75rem;font-size:1rem;background:var(--panel);color:var(--ink);}
+      .login-card input[type=text]:focus,.login-card input[type=password]:focus,.login-card input[type=number]:focus{outline:2px solid var(--blue);border-color:var(--blue);}
+      .login-card input[type=number]:disabled{opacity:.55;}
       .login-card select{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:.6rem .75rem;font-size:1rem;background:var(--panel);color:var(--ink);}
       .auth-tabs{display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:4px;gap:4px;margin:1rem 0 .2rem;}
       .auth-tabs button{flex:1;border:0;background:none;border-radius:8px;padding:.5rem;font-weight:800;font-size:.93rem;color:var(--muted);}
@@ -933,6 +934,9 @@
           <option value="120">120 giây mới được comment tiếp</option>
         </select>
         <div style="font-size:.8rem;color:var(--muted);margin-top:.3rem;line-height:1.45;">Chỉ áp cho thành viên thường trong phòng này — QTV và BĐH comment không bị chờ. BĐH cũng đổi được mục này ngay trong nút “Cài đặt phòng” ở thanh chế độ trò chuyện, không cần mở sửa sảnh.</div>
+        <label for="rmLimit">Giới hạn thành viên (cài đặt phòng)</label>
+        <input type="number" id="rmLimit" min="0" max="500" step="1" value="0" />
+        <div style="font-size:.8rem;color:var(--muted);margin-top:.3rem;line-height:1.45;">Số thành viên tối đa được vào phòng này: nhập 0 = không giới hạn, tối đa 500. Chỉ tính thành viên thật, không tính bot — đủ số người thì người mới không vào thêm được. BĐH cũng đổi được mục này ngay trong nút “Cài đặt phòng” ở thanh chế độ trò chuyện, hai nơi luôn đồng bộ nhau.</div>
         <div class="form-error" id="rmError"></div>
         <div class="modal-actions">
           <button class="ghost-btn" id="rmCancel" type="button">Hủy</button>
@@ -2151,6 +2155,17 @@
             rooms.push(nr);
           }
           nr.slug = d.room;
+          /* Sảnh vừa tạo từ form có nhập giới hạn thành viên: gửi ngay
+             set-room-limit cho phòng mới (0 = không giới hạn thì khỏi
+             gửi). Lỗi máy chủ trả về được handler 'error' hiện toast
+             như các lỗi khác. */
+          if(pendingRoomLimit > 0){
+            nr.limit = pendingRoomLimit;
+            if(!hubSend({ type: "set-room-limit", room: nr.id, limit: pendingRoomLimit })){
+              toast("Đã tạo sảnh nhưng chưa gửi được giới hạn " + pendingRoomLimit + " thành viên lên máy chủ — mở Cài đặt phòng để lưu lại");
+            }
+            pendingRoomLimit = 0;
+          }
           renderRoomList();
           toast("Đã tạo sảnh \"" + nr.name + "\" trên máy chủ — mọi máy đều thấy sảnh này");
           sfx("ding");
@@ -2998,6 +3013,9 @@
 
       /* ================= Admin: thêm / sửa / xóa phòng (chỉ tên + cài đặt comment — không có ô ID, không sửa logo) ================= */
       var editingRoomId = null; /* null = đang thêm phòng mới */
+      /* Giới hạn thành viên nhập trong form tạo sảnh (chế độ máy chủ):
+         giữ lại để gửi set-room-limit ngay khi máy chủ trả room-created */
+      var pendingRoomLimit = 0;
       /* Form phòng/sảnh KHÔNG còn ô ID và KHÔNG còn chỉnh sửa logo:
          ID chỉ để hiển thị ở đầu kênh và cột trái, logo giữ nguyên như cũ. */
       function setModalLabels(isMain){
@@ -3015,11 +3033,15 @@
         editingRoomId = roomId || null;
         formError($("rmError"), "");
         var cdField = $("rmCooldown");
+        var limField = $("rmLimit");
         if(editingRoomId==="main"){
           setModalLabels(true);
           $("roomModalTitle").textContent = "Sửa PHÒNG chính: " + mainRoom.name;
           $("rmName").value = mainRoom.name;
           if(cdField){ cdField.value = "0"; cdField.disabled = true; }
+          /* Phòng chính không có giới hạn thành viên riêng (giới hạn áp
+             cho từng sảnh) — khóa ô như ô thời gian chờ comment */
+          if(limField){ limField.value = "0"; limField.disabled = true; }
           $("rmDelete").classList.remove("show");
           $("rmSave").textContent = "Lưu phòng chính";
         } else if(editingRoomId){
@@ -3028,6 +3050,9 @@
           $("roomModalTitle").textContent = "Sửa sảnh: " + r.name;
           $("rmName").value = r.name;
           if(cdField){ cdField.value = String(r.commentCooldown || 0); cdField.disabled = false; }
+          /* Điền sẵn giới hạn thành viên hiện tại của sảnh (đồng bộ với
+             panel Cài đặt phòng — cùng đọc roomLimitOf) */
+          if(limField){ limField.value = String(roomLimitOf(r)); limField.disabled = false; }
           $("rmDelete").classList.toggle("show", rooms.length > 1);
           $("rmSave").textContent = "Lưu thay đổi";
         } else {
@@ -3039,6 +3064,7 @@
           $("roomModalTitle").textContent = "Thêm sảnh mới";
           $("rmName").value = "";
           if(cdField){ cdField.value = "0"; cdField.disabled = false; }
+          if(limField){ limField.value = "0"; limField.disabled = false; }
           $("rmDelete").classList.remove("show");
           $("rmSave").textContent = "Tạo sảnh";
         }
@@ -3079,23 +3105,54 @@
           var r = roomById(editingRoomId);
           r.name = name;
           r.commentCooldown = parseInt(($("rmCooldown") ? $("rmCooldown").value : "0"), 10) || 0;
+          /* Giới hạn thành viên trong form: dùng chung cơ chế với panel
+             Cài đặt phòng — máy chủ thì gửi set-room-limit (máy chủ chặn
+             thật + phát lại room-limit để đồng bộ), demo thì lưu local
+             theo phòng */
+          var limV = parseInt(($("rmLimit") ? $("rmLimit").value : "0"), 10);
+          if(isNaN(limV) || limV < 0) limV = 0;
+          if(limV > ROOM_LIMIT_MAX) limV = ROOM_LIMIT_MAX;
+          r.limit = limV;
+          var limNote = "";
+          if(hubActive()){
+            if(hubSend({ type: "set-room-limit", room: r.id, limit: limV })){
+              limNote = limV > 0 ? " — giới hạn " + limV + " thành viên đã gửi lên máy chủ" : " — đã tắt giới hạn thành viên trên máy chủ";
+            } else {
+              limNote = " — CHƯA gửi được giới hạn lên máy chủ, mở lại Cài đặt phòng để lưu lại";
+            }
+          } else {
+            saveRoomLimitLocal(r.id, limV);
+          }
           /* ID và logo sảnh giữ nguyên — form không còn ô sửa 2 mục này */
           closeRoomModal();
-          renderRoomHeader(); renderRoomList(); renderMessages();
-          toast("Đã cập nhật sảnh \"" + name + "\" — tên phòng chính ở đầu trang không đổi");
+          renderRoomHeader(); renderRoomList(); renderMessages(); updateOnline();
+          toast("Đã cập nhật sảnh \"" + name + "\" — tên phòng chính ở đầu trang không đổi" + limNote);
         } else if(hubActive()){
           /* Chế độ máy chủ thật: tạo sảnh TRÊN MÁY CHỦ để mọi máy cùng
              thấy. Máy chủ trả 'room-created' thì trang tự vào sảnh mới;
              không đủ quyền (chỉ QTV/BĐH mới tạo được) thì máy chủ trả
              lỗi và trang hiện đúng lỗi đó cho user. */
+          /* Giới hạn thành viên của sảnh mới: giữ lại trong
+             pendingRoomLimit — khi máy chủ trả room-created thì gửi
+             tiếp set-room-limit cho phòng mới (chỉ gửi khi > 0) */
+          var newLim = parseInt(($("rmLimit") ? $("rmLimit").value : "0"), 10);
+          if(isNaN(newLim) || newLim < 0) newLim = 0;
+          if(newLim > ROOM_LIMIT_MAX) newLim = ROOM_LIMIT_MAX;
+          pendingRoomLimit = newLim;
           if(hubSend({ type:"create-room", name: name })){
             closeRoomModal();
             toast("Đang tạo sảnh \"" + name + "\" trên máy chủ…");
           } else {
+            pendingRoomLimit = 0;
             formError($("rmError"), "Chưa nối được máy chủ chat — chờ vài giây rồi thử lại.");
           }
         } else {
-          var nr = { id:id, name:name, logo:null, commentCooldown: parseInt(($("rmCooldown") ? $("rmCooldown").value : "0"), 10) || 0, members:[ mkMember("BĐH " + name, true, "BĐH") ], messages:[ {type:"sys", text:"Sảnh \"" + name + "\" vừa được tạo. Chào mừng mọi người!"} ], unread:0, stage:null, queue:[], queueClosed:false };
+          var demoLim = parseInt(($("rmLimit") ? $("rmLimit").value : "0"), 10);
+          if(isNaN(demoLim) || demoLim < 0) demoLim = 0;
+          if(demoLim > ROOM_LIMIT_MAX) demoLim = ROOM_LIMIT_MAX;
+          var nr = { id:id, name:name, logo:null, commentCooldown: parseInt(($("rmCooldown") ? $("rmCooldown").value : "0"), 10) || 0, limit: demoLim, members:[ mkMember("BĐH " + name, true, "BĐH") ], messages:[ {type:"sys", text:"Sảnh \"" + name + "\" vừa được tạo. Chào mừng mọi người!"} ], unread:0, stage:null, queue:[], queueClosed:false };
+          /* Demo: lưu giới hạn local theo phòng như panel Cài đặt phòng */
+          saveRoomLimitLocal(id, demoLim);
           rooms.push(nr);
           state.openRooms[id] = true;
           closeRoomModal();

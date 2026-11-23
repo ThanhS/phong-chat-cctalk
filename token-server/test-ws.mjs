@@ -446,6 +446,48 @@ async function main() {
       const h = await (await fetch(`${BASE}/health`)).json();
       check('v3.5 /health luôn có maintenance:false', h.maintenance === false, JSON.stringify(h));
 
+      // ===== v3.8: giới hạn thành viên/phòng =====
+      // 17. Member đặt giới hạn -> forbidden; QTV đặt giới hạn 1 cho phòng 101.
+      c.ws.send(JSON.stringify({ type: 'set-room-limit', room: '101', limit: 1 }));
+      const limDenied = await waitFor(c.msgs, (m) => m.type === 'error' && m.code === 'forbidden' && /giới hạn/.test(m.message || ''));
+      check('v3.8 thành viên đặt giới hạn -> forbidden', !!limDenied);
+      a.ws.send(JSON.stringify({ type: 'join', room: '101' }));
+      await waitFor(a.msgs, (m) => m.type === 'room-state' && m.room === 'dai-sanh');
+      a.ws.send(JSON.stringify({ type: 'set-room-limit', room: '101', limit: 1 }));
+      const limA = await waitFor(a.msgs, (m) => m.type === 'room-limit' && m.room === 'dai-sanh' && m.limit === 1);
+      const limC = await waitFor(c.msgs, (m) => m.type === 'room-limit' && m.room === 'dai-sanh' && m.limit === 1);
+      check('v3.8 QTV đặt giới hạn 1 -> phát room-limit cho mọi máy', !!limA && !!limC);
+      // Danh sách phòng + room-state mang theo limit; cùng 1 người mở máy thứ 2 vẫn vào được.
+      const a2 = await connect();
+      a2.ws.send(JSON.stringify({ type: 'auth', token: adminSession }));
+      const roomsA2 = await waitFor(a2.msgs, (m) => m.type === 'rooms');
+      check('v3.8 rooms list có limit của phòng', roomsA2?.rooms.find((r) => r.room === 'dai-sanh')?.limit === 1, JSON.stringify(roomsA2?.rooms));
+      a2.ws.send(JSON.stringify({ type: 'join', room: '101' }));
+      const stateA2 = await waitFor(a2.msgs, (m) => m.type === 'room-state' && m.room === 'dai-sanh');
+      check('v3.8 cùng người mở máy thứ 2 vào phòng đầy vẫn được + room-state có limit', !!stateA2 && stateA2.limit === 1, JSON.stringify(stateA2?.limit));
+      // Người thật thứ 2 vào phòng đầy -> room-full, không vào được.
+      const cStatesBefore = c.msgs.filter((m) => m.type === 'room-state' && m.room === 'dai-sanh').length;
+      c.ws.send(JSON.stringify({ type: 'join', room: '101' }));
+      const full = await waitFor(c.msgs, (m) => m.type === 'error' && m.code === 'room-full');
+      check('v3.8 người thứ 2 vào phòng đầy -> room-full', !!full && /giới hạn 1/.test(full.message || ''), JSON.stringify(full));
+      await sleep(300);
+      check('v3.8 bị room-full thì không nhận room-state (không vào được)', c.msgs.filter((m) => m.type === 'room-state' && m.room === 'dai-sanh').length === cStatesBefore);
+      // Bỏ giới hạn (0) -> vào lại được.
+      a.ws.send(JSON.stringify({ type: 'set-room-limit', room: '101', limit: 0 }));
+      const lim0 = await waitFor(c.msgs, (m) => m.type === 'room-limit' && m.room === 'dai-sanh' && m.limit === 0);
+      check('v3.8 đặt giới hạn 0 -> phát room-limit 0', !!lim0);
+      c.ws.send(JSON.stringify({ type: 'join', room: '101' }));
+      const stateC101 = await waitFor(c.msgs, (m) => m.type === 'room-state' && m.room === 'dai-sanh');
+      check('v3.8 bỏ giới hạn -> vào phòng lại được (limit 0)', !!stateC101 && stateC101.limit === 0);
+      // Giới hạn sai -> bad-limit.
+      const badBefore = a.msgs.filter((m) => m.type === 'error' && m.code === 'bad-limit').length;
+      a.ws.send(JSON.stringify({ type: 'set-room-limit', room: '101', limit: 9999 }));
+      a.ws.send(JSON.stringify({ type: 'set-room-limit', room: '101', limit: -1 }));
+      a.ws.send(JSON.stringify({ type: 'set-room-limit', room: '101', limit: 2.5 }));
+      const bad3 = await waitFor(a.msgs, () => a.msgs.filter((m) => m.type === 'error' && m.code === 'bad-limit').length >= badBefore + 3);
+      check('v3.8 giới hạn 9999 / -1 / 2.5 -> bad-limit', !!bad3, `bad=${a.msgs.filter((m) => m.type === 'error' && m.code === 'bad-limit').length}`);
+      a2.ws.close();
+
       a.ws.close();
       c.ws.close();
     }

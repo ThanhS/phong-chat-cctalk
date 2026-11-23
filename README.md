@@ -103,3 +103,20 @@ Nhạc Lô Tô nằm trong thư mục `assets/loto/` (01–90 + intro).
   tài khoản/điểm/áo/phòng, DATABASE_URL hỏng thì quay về file).
 - Trên Render: `render.yaml` đã có sẵn biến `DATABASE_URL` (điền lúc
   deploy, không commit giá trị thật).
+
+### v3.8 — Giới hạn thành viên/phòng
+
+- QTV/BĐH đặt giới hạn số thành viên thật tối đa cho từng phòng
+  (`set-room-limit`, số nguyên 0–500; 0 = không giới hạn). Bot không
+  tính vào giới hạn; 1 người mở nhiều máy chỉ tính 1. Thành viên thường
+  đặt giới hạn bị từ chối (`forbidden`), số sai bị báo `bad-limit`.
+- Phòng đã đủ người thì người mới vào bị từ chối (`room-full`) và giữ
+  nguyên phòng cũ; hạ giới hạn xuống dưới số người hiện tại thì không
+  đá ai ra, chỉ chặn người vào mới. Giới hạn hiện trong danh sách phòng
+  (`rooms`, `GET /rooms`) và `room-state`; đổi giới hạn được phát cho
+  mọi máy (`room-limit`).
+- Giới hạn lưu bền cùng key `rooms` trên Postgres (khi có
+  `DATABASE_URL`, lưu ngay khi đổi); không có DB thì giữ trong RAM như
+  phòng tự tạo. Xóa phòng tự tạo thì giới hạn của phòng đó cũng bị xóa.
+- Test local: `node test-ws.mjs` — 105/105 PASS (thêm 9 kiểm tra giới
+  hạn); `node test-db.mjs` — 26/26 PASS.

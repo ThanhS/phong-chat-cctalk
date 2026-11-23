@@ -146,15 +146,16 @@
         .member.grant-yellow .mname{color:#FFFF00;text-shadow:0 0 3px rgba(0,0,0,.35);}
         .member.grant-purple .mname{color:#cfa6f5;}
       }
-      .gender-ico{width:24px;height:24px;border-radius:6px;flex:none;display:grid;place-items:center;}
+      .gender-ico{width:24px;height:24px;border-radius:6px;flex:none;display:grid;place-items:center;--ico-detail:#fff;}
       .gender-ico.male{background:#dbeafe;color:#1d6fd1;}
       .gender-ico.female{background:#fce7f3;color:#d6337f;}
+      .gender-ico .ico-detail{fill:var(--ico-detail,#fff);}
       @media (prefers-color-scheme: dark){ .gender-ico.male{background:#17344a;color:#7cc0ff;} .gender-ico.female{background:#45203a;color:#ff9ecb;} }
       /* Màu áo theo vai trò: ADMIN đỏ, BĐH đen, cấp màu vàng / tím cho BĐH */
-      .gender-ico.tile-admin{background:var(--red);color:#fff;}
-      .gender-ico.tile-bdh{background:#191919;color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);}
-      .gender-ico.tile-yellow{background:#FFFF00;color:#4a3200;box-shadow:inset 0 0 0 1px rgba(120,100,0,.35);}
-      .gender-ico.tile-purple{background:#7b3fc4;color:#fff;}
+      .gender-ico.tile-admin{background:var(--red);color:#fff;--ico-detail:var(--red);}
+      .gender-ico.tile-bdh{background:#191919;color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);--ico-detail:#191919;}
+      .gender-ico.tile-yellow{background:#FFFF00;color:#4a3200;box-shadow:inset 0 0 0 1px rgba(120,100,0,.35);--ico-detail:#FFFF00;}
+      .gender-ico.tile-purple{background:#7b3fc4;color:#fff;--ico-detail:#7b3fc4;}
       .member .tag{flex:none;font-size:.64rem;font-weight:800;padding:.1rem .4rem;border-radius:4px;background:#fdeceb;color:var(--red);border:1px solid #f5c6c0;}
       .member .tag.vip{background:#fff4d6;color:#9a6a00;border-color:#ecd28a;}
       .member .tag.banned{background:#fdeceb;color:#b3261e;border-color:#f5c6c0;}
@@ -269,6 +270,14 @@
       .maint-role-btn.bdh{background:linear-gradient(180deg,#2c3138,#12161a);color:#fff;border-color:rgba(255,255,255,.4);}
       .maint-role-btn.member{background:rgba(255,255,255,.94);color:#0b5a86;}
       .maint-demo-note{margin-top:.6rem;text-align:center;font-size:.78rem;line-height:1.45;color:rgba(255,255,255,.78);}
+      /* Khối vào demo ngay trên thẻ đăng nhập: máy mới chưa lưu địa chỉ
+         máy chủ (hoặc máy chủ đang tắt) vẫn vào demo test được ngay,
+         không phải chờ màn hình bảo trì */
+      .login-demo-box{margin:.9rem 0 .4rem;background:#eef6fb;border:1.5px solid #bcd9ec;border-radius:14px;padding:.75rem .85rem .8rem;}
+      @media (prefers-color-scheme: dark){ .login-demo-box{background:#14344a;border-color:#2c5a7d;} }
+      .login-demo-title{text-align:center;font-weight:800;font-size:.95rem;}
+      .login-demo-box .maint-role-btn.member{border-color:#9db8c9;}
+      .login-demo-note{margin-top:.55rem;text-align:center;font-size:.78rem;line-height:1.45;color:var(--muted);}
       @media (max-width:640px){
         .maint-card{padding:2.4rem 1.15rem 1.2rem;border-radius:22px;}
         .maint-tab{padding:.45rem 1rem .6rem;}
@@ -395,6 +404,7 @@
       .room-settings .rs-title{font-size:.8rem;font-weight:800;letter-spacing:.03em;margin-bottom:.5rem;}
       .room-settings .rs-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:.35rem 0;}
       .room-settings select{border:1px solid var(--line);border-radius:8px;padding:.4rem .55rem;background:var(--panel);color:var(--ink);font-size:.9rem;min-height:2.25rem;}
+      .room-settings input[type="number"]{border:1px solid var(--line);border-radius:8px;padding:.4rem .55rem;background:var(--panel);color:var(--ink);font-size:.9rem;min-height:2.25rem;width:6.5rem;}
       .room-settings .rs-note{font-size:.82rem;color:var(--muted);line-height:1.5;}
       .cooldown-badge{display:none;background:#fff4d6;color:#8a5c00;border:1px solid #d9a92c;border-radius:999px;padding:.14rem .6rem;font-size:.76rem;font-weight:800;}
       .cooldown-badge.show{display:inline-block;}
@@ -854,9 +864,19 @@
         <h1>Phòng chat cộng đồng</h1>
         <p>Đăng nhập bằng ID và mật khẩu để vào phòng — tài khoản do máy chủ kiểm tra, trang không giữ mật khẩu nào. Chưa có tài khoản thì bấm tab Đăng ký, tạo ID mới là vào được ngay.</p>
 
+        <div class="login-demo-box">
+          <div class="login-demo-title">Vào chế độ demo (không cần máy chủ)</div>
+          <div class="maint-demo-btns">
+            <button class="maint-role-btn qtv" type="button" data-demo-role="qtv">QTV (áo đỏ)</button>
+            <button class="maint-role-btn bdh" type="button" data-demo-role="bdh-den">BĐH (áo đen)</button>
+            <button class="maint-role-btn member" type="button" data-demo-role="member">Thành viên</button>
+          </div>
+          <div class="login-demo-note">Chọn vai để vào test ngay — không cần mật khẩu. Demo chỉ chạy trên máy này, không đồng bộ sang máy khác.</div>
+        </div>
+
         <label for="authServerInput">Máy chủ đăng nhập</label>
         <input type="text" id="authServerInput" maxlength="120" placeholder="Ví dụ: https://token.example.com" autocomplete="off" spellcheck="false" />
-        <div class="auth-server-hint">Địa chỉ token-server của phòng — cũng là máy chủ cấp token voice, dùng chung 1 địa chỉ cho cả đăng nhập và voice. Chỉ cần nhập 1 lần trên máy này, trang tự nhớ cho các lần sau.</div>
+        <div class="auth-server-hint">Địa chỉ token-server của phòng — cũng là máy chủ cấp token voice, dùng chung 1 địa chỉ cho cả đăng nhập và voice. Trang đã điền sẵn địa chỉ máy chủ chính thức; chỉ đổi khi phòng dùng máy chủ khác, trang tự nhớ cho các lần sau.</div>
 
         <div class="auth-tabs" role="tablist">
           <button id="tabLogin" class="sel" type="button">Đăng nhập</button>
@@ -881,7 +901,7 @@
           <input type="text" id="regName" maxlength="24" placeholder="Ví dụ: ThanhS" />
           <label for="regGender">Giới tính — hiện ký hiệu trong danh sách phòng</label>
           <select id="regGender">
-            <option value="M">Nam — ký hiệu Quần</option>
+            <option value="M">Nam — ký hiệu Áo</option>
             <option value="F">Nữ — ký hiệu Váy</option>
           </select>
           <label for="regPass">Mật khẩu</label>
@@ -931,7 +951,7 @@
         <input type="text" id="mmName" maxlength="24" placeholder="Ví dụ: ThanhS" />
         <label for="mmGender">Giới tính — quyết định ký hiệu và màu tên</label>
         <select id="mmGender">
-          <option value="M">Nam — ký hiệu Quần, tên màu xanh</option>
+          <option value="M">Nam — ký hiệu Áo, tên màu xanh</option>
           <option value="F">Nữ — ký hiệu Váy, tên màu hồng</option>
         </select>
         <div id="mmGrantWrap" style="display:none;">
@@ -1092,6 +1112,13 @@
               <button class="qpill primary" id="rsCooldownSave" type="button">Lưu cài đặt</button>
             </div>
             <div class="rs-note">Ví dụ set 30 giây: thành viên thường gửi 1 tin xong phải chờ đủ 30 giây mới gửi tin tiếp theo được trong phòng này — gửi sớm sẽ bị chặn và báo còn phải chờ bao nhiêu giây. QTV và BĐH (đỏ, đen, vàng, tím) không bị chờ. Mỗi phòng giữ một mức riêng, đổi phòng là đổi theo cài đặt của phòng đó.</div>
+            <div class="rs-row">
+              <label for="rsLimit" style="font-weight:700;font-size:.9rem;">Giới hạn thành viên:</label>
+              <input type="number" id="rsLimit" min="0" max="500" step="1" value="0" />
+              <span style="font-size:.85rem;color:var(--muted);">người — 0 = không giới hạn, tối đa 500</span>
+              <button class="qpill primary" id="rsLimitSave" type="button">Lưu giới hạn</button>
+            </div>
+            <div class="rs-note">Giới hạn tính trên thành viên thật, không tính bot. Đủ số người thì người mới không vào thêm được phòng này nữa. Tiêu đề phòng sẽ hiện “Online: số người thật / giới hạn” khi đang bật giới hạn.</div>
           </div>
 
           <div class="queue-panel" id="queuePanel">
@@ -1412,6 +1439,14 @@
         var savedProfile = localStorage.getItem(AUTH_LS.profile);
         if(savedProfile) authProfile = JSON.parse(savedProfile);
       }catch(e){}
+      /* Máy mới chưa từng lưu địa chỉ máy chủ: tự điền sẵn địa chỉ máy
+         chủ chính thức và lưu ngay — người dùng không phải nhập tay mới
+         đăng nhập / vào demo được; vẫn sửa lại địa chỉ khác như cũ. */
+      var DEFAULT_AUTH_SERVER = "https://cctalk-token-server-igtz.onrender.com";
+      if(!authServer){
+        authServer = DEFAULT_AUTH_SERVER;
+        try{ localStorage.setItem(AUTH_LS.server, authServer); }catch(e){}
+      }
       function normalizeServerUrl(u){
         var t = String(u || "").trim().replace(/\/+$/, "");
         if(!t) return "";
@@ -1439,14 +1474,29 @@
         }catch(e){}
       }
       function clearAuthSession(){ saveAuthSession("", null); }
+      /* fetch có giới hạn thời gian (AbortController): máy chủ Render
+         đang ngủ / thức dậy thì request bị hủy sau timeoutMs thay vì treo
+         vô hạn — nơi gọi nhận lỗi mạng và chuyển sang màn hình chờ bảo
+         trì / demo. Trình duyệt không hỗ trợ AbortController thì dùng
+         fetch thường như cũ. */
+      function fetchWithTimeout(url, opts, timeoutMs){
+        if(typeof AbortController === "undefined") return fetch(url, opts);
+        var ctrl = new AbortController();
+        var o = {};
+        if(opts) for(var k in opts) o[k] = opts[k];
+        o.signal = ctrl.signal;
+        var timer = setTimeout(function(){ try{ ctrl.abort(); }catch(e){} }, timeoutMs || 15000);
+        return fetch(url, o).then(function(r){ clearTimeout(timer); return r; }, function(err){ clearTimeout(timer); throw err; });
+      }
       /* Gọi API máy chủ đăng nhập: tự gắn session (nếu có) qua header
          Authorization: Bearer. Trả về { status, ok, data } — lỗi mạng thì
-         promise bị reject để nơi gọi báo "không gọi được máy chủ". */
+         promise bị reject để nơi gọi báo "không gọi được máy chủ".
+         Giới hạn 20 giây để lúc Render thức dậy trang không treo. */
       function authFetch(path, opts){
         opts = opts || {};
         var headers = { "Content-Type": "application/json" };
         if(authSession) headers["Authorization"] = "Bearer " + authSession;
-        return fetch(authServer + path, { method: opts.method || "GET", headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined })
+        return fetchWithTimeout(authServer + path, { method: opts.method || "GET", headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined }, 20000)
           .then(function(res){
             return res.json().catch(function(){ return null; }).then(function(data){ return { status: res.status, ok: res.ok, data: data }; });
           });
@@ -1652,7 +1702,7 @@
           }
           maintRender();
         };
-        fetch(authServer + "/health").then(function(res){
+        fetchWithTimeout(authServer + "/health", null, 8000).then(function(res){
           return res.json().then(function(data){ return { res: res, data: data }; }).catch(function(){ return { res: res, data: null }; });
         }).then(function(x){
           var ok = x.res.ok && x.data && x.data.ok === true && x.data.maintenance !== true;
@@ -1823,6 +1873,11 @@
         r.members = (d.members || []).map(hubMemberLocal);
         r.messages = (d.messages || []).map(hubMsgLocal);
         r.unread = 0;
+        /* Giới hạn thành viên máy chủ gửi kèm room-state */
+        if(d.limit != null){ var dlv = parseInt(d.limit, 10); r.limit = isNaN(dlv) ? 0 : Math.max(0, Math.min(ROOM_LIMIT_MAX, dlv)); }
+        /* Nhận được room-state = join thành công — xóa dấu vết phòng cũ
+           đang chờ (chỉ còn dùng khi join bị từ chối 'room-full') */
+        if(r.id === state.roomId) state.pendingJoinPrev = null;
         /* Vòng Lô Tô hiện tại của phòng đi kèm room-state: vào phòng là
            thấy ngay vòng đang mở (nếu có) — initial:true nên không phát
            thông báo "vừa mở vòng" cho vòng đã có từ trước */
@@ -1952,6 +2007,8 @@
             rooms.push(r);
           }
           r.slug = sr.room;
+          /* Giới hạn thành viên máy chủ gửi kèm danh sách phòng */
+          if(sr.limit != null){ var slv = parseInt(sr.limit, 10); r.limit = isNaN(slv) ? 0 : Math.max(0, Math.min(ROOM_LIMIT_MAX, slv)); }
           if(parseInt(pid, 10) >= 104){
             seenCustom[pid] = true;
             var nm = String(sr.label || "").replace(/\s*\(ID \d+\)\s*$/, "");
@@ -1989,6 +2046,8 @@
         hubSetStatus();
         if(hub.demoSnapshot){
           try{ rooms = JSON.parse(hub.demoSnapshot); }catch(e){}
+          /* Về chế độ demo: giới hạn thành viên lấy lại từ localStorage */
+          rooms.forEach(function(r){ r.limit = loadRoomLimitLocal(r.id); });
           if(state.user){
             if(!roomById(state.roomId)) state.roomId = rooms[0].id;
             moveUserTo(state.roomId);
@@ -2056,6 +2115,16 @@
         } else if(d.type === "rank-changed"){
           /* Có người vừa được cấp / gỡ áo BĐH trên máy chủ — đồng bộ ngay */
           hubApplyRankChanged(d);
+        } else if(d.type === "room-limit"){
+          /* Máy chủ báo giới hạn thành viên của 1 phòng vừa đổi: cập
+             nhật hiển thị (panel cài đặt + Online X / Y ở tiêu đề) */
+          var rlr = hubRoomBySlug(d.room) || roomById(String(d.room));
+          if(rlr){
+            var rlv = parseInt(d.limit, 10);
+            rlr.limit = isNaN(rlv) ? 0 : Math.max(0, Math.min(ROOM_LIMIT_MAX, rlv));
+            if(rlr.id === state.roomId) renderRoomSettingsBar();
+            updateOnline(); renderRoomList();
+          }
         } else if(d.type === "loto-state"){
           /* Trạng thái vòng Lô Tô của phòng thay đổi — vẽ lại cửa sổ Lô Tô theo máy chủ */
           var lsr = hubRoomBySlug(d.room);
@@ -2103,6 +2172,20 @@
         } else if(d.type === "error"){
           if(d.code === "unauthorized"){ hubDisconnect(); sessionExpired(); }
           else if(d.code === "maintenance"){ maintShow(d.message || null); }
+          else if(d.code === "room-full"){
+            /* Phòng đích đã đủ thành viên thật: báo rõ và quay về phòng
+               cũ (phòng ghi trong pendingJoinPrev lúc bấm chuyển phòng),
+               không kẹt ở phòng không vào được */
+            var backRoom = state.pendingJoinPrev;
+            state.pendingJoinPrev = null;
+            toast("Phòng đã đủ thành viên — không vào thêm được" + (backRoom && backRoom !== state.roomId ? ", bạn vẫn ở phòng hiện tại" : ""));
+            sfx("error");
+            if(backRoom && backRoom !== state.roomId && roomById(backRoom)){
+              state.joinReverting = true;
+              enterRoom(backRoom);
+              state.joinReverting = false;
+            }
+          }
           else if(d.message){
             toast(d.message);
             /* Lỗi thưởng điểm hiện thêm ngay trong cửa sổ thành viên đang mở */
@@ -2318,6 +2401,34 @@
         addBots(mainRoom, 35);
       })();
 
+      /* ================= Giới hạn thành viên mỗi phòng =================
+         QTV / BĐH set trong panel Cài đặt phòng: số nguyên 0–500
+         (0 = không giới hạn). Giới hạn tính trên THÀNH VIÊN THẬT,
+         không tính bot. Chế độ máy chủ: lưu qua hub {type:'set-room-limit'}
+         và máy chủ là nơi chặn thật (join bị từ chối trả error code
+         'room-full'); máy chủ phát lại {type:'room-limit'} + đính kèm
+         trường limit trong room-state / danh sách rooms. Chế độ demo:
+         lưu local theo từng phòng trong localStorage, chỉ để hiển thị. */
+      var ROOM_LIMIT_MAX = 500;
+      function roomLimitOf(r){
+        var v = parseInt(r && r.limit, 10);
+        if(isNaN(v) || v < 0) return 0;
+        return Math.min(v, ROOM_LIMIT_MAX);
+      }
+      function realMemberCount(r){
+        return r ? r.members.filter(function(m){ return !m.bot; }).length : 0;
+      }
+      function saveRoomLimitLocal(roomId, v){
+        try{ localStorage.setItem("cctalk.roomLimit." + roomId, String(v)); }catch(e){}
+      }
+      function loadRoomLimitLocal(roomId){
+        try{
+          var v = parseInt(localStorage.getItem("cctalk.roomLimit." + roomId), 10);
+          return isNaN(v) ? 0 : Math.max(0, Math.min(ROOM_LIMIT_MAX, v));
+        }catch(e){ return 0; }
+      }
+      rooms.forEach(function(r){ r.limit = loadRoomLimitLocal(r.id); });
+
       /* Hàng chờ lên mic + người đang trên mic, theo từng sảnh */
       (function initQueues(){
         var seeds = {
@@ -2386,12 +2497,19 @@
       var micSVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg>';
       var micOffSVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M4 4l16 16"/></svg>';
       var editSVG = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 4.5l3 3L8 19l-4.2 1.2L5 16 16.5 4.5Z"/><path d="M14.5 6.5l3 3"/></svg>';
-      var pantsSVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.5 2.5h11l.9 19h-5.1L12 10.2 10.7 21.5H5.6l.9-19Zm.2 2v2.2h10.6V4.5H6.7Z"/></svg>';
-      var skirtSVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.2 2.5h7.6l-1.1 5 3.4 10.8c.2.7-.3 1.2-1 1.2H6.9c-.7 0-1.2-.5-1-1.2L9.3 7.5l-1.1-5Zm1.9 2 .5 2.4h2.8l.5-2.4h-3.8Z"/></svg>';
+      /* Icon giới tính vẽ lại theo ảnh mẫu (flat vector): NAM = áo sơ mi
+         dài tay, cổ đức 2 lá nhọn + túi ngực; NỮ = váy liền thân tay ngắn,
+         cổ Peter Pan 2 lá tròn + thắt lưng ngang eo, chân váy xòe chữ A.
+         Thân áo/váy tô currentColor (màu theo cấp bậc / giới tính như cũ:
+         QTV đỏ, BĐH đen / vàng FFFF00 / tím, nữ hồng, nam xanh); cổ áo +
+         thắt lưng + túi ngực tô màu sáng qua class ico-detail (biến
+         --ico-detail theo từng ô màu, xem CSS .gender-ico). */
+      var shirtSVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 2.8 L5.9 3.9 L4.5 20.2 L7.7 20.2 L8.3 10.8 L8.3 21 L15.7 21 L15.7 10.8 L16.3 20.2 L19.5 20.2 L18.1 3.9 L15 2.8 L12 6.4 Z"/><path class="ico-detail" d="M8.8 2.5 L12 4.8 L12 9.2 L8.5 6.3 Z"/><path class="ico-detail" d="M15.2 2.5 L12 4.8 L12 9.2 L15.5 6.3 Z"/><rect class="ico-detail" x="12.7" y="10.6" width="2.6" height="1.5" rx="0.3"/></svg>';
+      var dressSVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 3 L6.2 4.2 L3.8 8.6 L6.8 10 L8.4 12.2 L8.4 14 L5.2 21.2 Q12 22.2 18.8 21.2 L15.6 14 L15.6 12.2 L17.2 10 L20.2 8.6 L17.8 4.2 L15 3 Q13.9 5.3 12 5.3 Q10.1 5.3 9 3 Z"/><path class="ico-detail" d="M12 2.6 C10.9 1.9 9.3 1.9 8.5 2.8 C7.8 3.6 8 4.9 8.9 5.5 C10 6.2 11.4 5.9 12 5 Z"/><path class="ico-detail" d="M12 2.6 C13.1 1.9 14.7 1.9 15.5 2.8 C16.2 3.6 16 4.9 15.1 5.5 C14 6.2 12.6 5.9 12 5 Z"/><path class="ico-detail" d="M8.3 12.3 h7.4 v1.6 h-7.4 Z"/></svg>';
       function genderHTML(gender, tile){
         var female = gender==="F";
         var cls = "gender-ico " + (tile ? tile : (female ? "female" : "male"));
-        return '<span class="'+cls+'" title="'+(female?"Nữ — ký hiệu Váy":"Nam — ký hiệu Quần")+'" aria-label="'+(female?"Nữ":"Nam")+'">'+(female?skirtSVG:pantsSVG)+"</span>";
+        return '<span class="'+cls+'" title="'+(female?"Nữ — ký hiệu Váy":"Nam — ký hiệu Áo")+'" aria-label="'+(female?"Nữ":"Nam")+'">'+(female?dressSVG:shirtSVG)+"</span>";
       }
       var shieldSVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Zm-1.2 14.6-3-3 1.4-1.4 1.6 1.6 4-4 1.4 1.4-5.4 5.4Z"/></svg>';
       /* Icon LÊN MIC: micro + mũi tên lên, nằm trong nút tròn xanh lá sau tên user */
@@ -2618,9 +2736,14 @@
            roomDisplayCount như số cạnh phòng ở cột trái — và danh sách
            thành viên của sảnh đó cũng vẽ đúng bấy nhiêu dòng, nên 3 con
            số luôn bằng nhau ở cả chế độ máy chủ lẫn demo (bản cũ ở demo
-           cộng thêm số mô phỏng 118 + nhiễu nên 3 nơi lệch nhau) */
+           cộng thêm số mô phỏng 118 + nhiễu nên 3 nơi lệch nhau).
+           Phòng có giới hạn thành viên: hiện "số thành viên thật /
+           giới hạn" (bot không tính vào giới hạn). */
         var hr = currentRoom();
-        $("onlineCount").textContent = hr ? roomDisplayCount(hr) : 0;
+        var el = $("onlineCount"); if(!el) return;
+        if(!hr){ el.textContent = 0; return; }
+        var lim = roomLimitOf(hr);
+        el.textContent = lim > 0 ? (realMemberCount(hr) + " / " + lim) : roomDisplayCount(hr);
       }
 
       /* ================= Enter room ================= */
@@ -2651,10 +2774,14 @@
       function enterRoom(roomId){
         var r = roomById(roomId); if(!r) return;
         var changed = roomId !== state.roomId;
+        var prevRoomId = state.roomId;
         state.roomId = roomId;
         state.openRooms[roomId] = true;
         r.unread = 0;
         if(changed && state.user){
+          /* Nhớ phòng vừa rời (chế độ máy chủ): join bị máy chủ từ chối
+             vì phòng đủ người ('room-full') thì quay về phòng này */
+          if(hubActive() && !state.joinReverting) state.pendingJoinPrev = prevRoomId;
           if(typeof stopAllTalk === "function") stopAllTalk();
           moveUserTo(roomId);
           /* Chế độ máy chủ thật: báo hub vào sảnh này — máy chủ trả
@@ -3010,7 +3137,7 @@
            người được đen cấp vàng / tím trở thành BĐH và hiện LOGO BĐH cạnh tên.
          - BĐH áo vàng: cấp được áo TÍM cho thành viên thường (người được cấp cũng hiện logo BĐH).
          - BĐH áo tím: không cấp áo được cho ai.
-         Áo đã cấp đổi cả màu áo (ô Quần/Váy), màu tên và thứ hạng của người đó.
+         Áo đã cấp đổi cả màu áo (ô Áo/Váy), màu tên và thứ hạng của người đó.
          Giá trị trong ô chọn áo: "" = thành viên thường, "black" = BĐH áo đen,
          "yellow" = BĐH áo vàng, "purple" = BĐH áo tím. */
       var editingMemberRef = null; /* { roomId, member, canEdit, canGrant } */
@@ -3020,7 +3147,7 @@
         if(m.grant==="yellow") s = "BĐH — áo vàng (do " + (m.grantedBy==="red" ? "QTV áo đỏ" : m.grantedBy==="yellow" ? "áo vàng" : "áo đen") + " cấp, hiện logo BĐH): toàn quyền như QTV nhưng KHÔNG cấm chat / khóa mic được áo đỏ và áo đen; được cấp áo tím, thêm user vào xếp hàng, set thời gian chờ comment";
         else if(m.grant==="purple") s = "BĐH — áo tím (do " + (m.grantedBy==="red" ? "QTV áo đỏ" : m.grantedBy==="yellow" ? "áo vàng" : "áo đen") + " cấp, hiện logo BĐH): toàn quyền như QTV nhưng KHÔNG cấm chat / khóa mic được áo đỏ, đen và vàng; được thêm user vào xếp hàng, set thời gian chờ comment";
         else if(m.tag==="BĐH") s = "BĐH — áo đen: toàn quyền như QTV nhưng KHÔNG cấm chat / khóa mic được áo đỏ (QTV); được cấp áo vàng / tím (người được cấp hiện logo BĐH), thêm user vào xếp hàng, set thời gian chờ comment";
-        else s = m.gender==="F" ? "Thành viên nữ — váy, tên màu hồng" : "Thành viên nam — quần, tên màu xanh";
+        else s = m.gender==="F" ? "Thành viên nữ — váy, tên màu hồng" : "Thành viên nam — áo, tên màu xanh";
         if(m.chatBanned) s += ". Đang bị cấm chat";
         if(m.micBanned) s += ". Đang bị khóa mic";
         return s;
@@ -3349,6 +3476,8 @@
           if(title) title.textContent = "CÀI ĐẶT PHÒNG “" + r.name.toUpperCase() + "” (ID: " + r.id + ") — chỉ QTV và BĐH đổi được, áp riêng cho phòng này";
           var sel = $("rsCooldown");
           if(sel && document.activeElement!==sel) sel.value = String(r.commentCooldown || 0);
+          var limInp = $("rsLimit");
+          if(limInp && document.activeElement!==limInp) limInp.value = String(roomLimitOf(r));
         }
         var badge = $("cooldownBadge");
         if(badge){
@@ -3626,6 +3755,31 @@
         toast(v>0 ? "Đã set: chờ " + v + " giây mới được comment tiếp (phòng " + r.name + ")" : "Đã tắt giới hạn chờ comment (phòng " + r.name + ")");
         sfx("ding");
         renderRoomSettingsBar();
+      });
+      /* Lưu giới hạn thành viên của phòng đang mở: chế độ máy chủ gửi
+         {type:'set-room-limit', room, limit} lên hub (máy chủ chặn thật
+         khi phòng đủ người); chế độ demo lưu local theo phòng. */
+      $("rsLimitSave").addEventListener("click", function(){
+        var r = currentRoom(); if(!r) return;
+        if(!isManagerInRoom(r)){ toast("Chỉ QTV và BĐH mới set giới hạn thành viên được"); sfx("error"); return; }
+        var v = parseInt($("rsLimit").value, 10);
+        if(isNaN(v) || v < 0) v = 0;
+        if(v > ROOM_LIMIT_MAX) v = ROOM_LIMIT_MAX;
+        $("rsLimit").value = String(v);
+        r.limit = v;
+        if(hubActive()){
+          if(hubSend({ type: "set-room-limit", room: r.id, limit: v })){
+            toast(v > 0 ? "Đã gửi giới hạn " + v + " thành viên thật lên máy chủ (phòng " + r.name + ")" : "Đã gửi tắt giới hạn thành viên lên máy chủ (phòng " + r.name + ")");
+          } else {
+            toast("Chưa nối được máy chủ — chưa lưu được giới hạn, thử lại khi đã nối máy chủ"); sfx("error"); return;
+          }
+        } else {
+          saveRoomLimitLocal(r.id, v);
+          toast(v > 0 ? "Đã set giới hạn " + v + " thành viên (phòng " + r.name + ")" : "Đã tắt giới hạn thành viên (phòng " + r.name + ")");
+        }
+        sfx("ding");
+        renderRoomSettingsBar();
+        updateOnline();
       });
       setInterval(function(){
         if(state.mode!=="queue" || !state.user) return;

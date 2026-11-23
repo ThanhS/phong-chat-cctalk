@@ -46,6 +46,9 @@
 // V3.7: style chữ chat mở rộng — thêm màu vàng #ffff00, cỡ chữ mọi số
 // nguyên 12-20 (trước chỉ 12/14/16/18/20), thêm in đậm/in nghiêng/gạch
 // chân (b/i/u, chỉ lưu khi true).
+// V3.8: giới hạn thành viên thật/phòng (set-room-limit, QTV/BĐH đặt,
+// 0-500, 0 = không giới hạn) — phòng đầy thì người mới vào bị từ chối
+// (room-full); giới hạn lưu bền cùng key "rooms" trên Postgres.
 
 import http from 'node:http';
 import crypto from 'node:crypto';
@@ -469,6 +472,8 @@ const roomsByCreator = new Map(); // userId -> count
 //     {type:'set-rank', userId, rank}   — cấp áo BĐH đồng bộ (v3.4): QTV/đen/vàng
 //                                          cấp áo thấp hơn áo mình cho người dưới mình;
 //                                          rank 'member' = gỡ áo; không cấp được 'qtv'
+//     {type:'set-room-limit', room, limit} — (v3.8) QTV/BĐH đặt giới hạn thành viên
+//                                          thật của phòng (số nguyên 0-500; 0 = bỏ giới hạn)
 //     {type:'message', ..., style:{color,size,b?,i?,u?}} — màu/cỡ chữ tùy chọn (v3.5;
 //                                          v3.7: size nguyên 12-20, thêm đậm/nghiêng/gạch chân);
 //                                          sai whitelist -> bỏ style
@@ -488,8 +493,8 @@ const roomsByCreator = new Map(); // userId -> count
 //                                          (members trong presence/room-state cũng là profile)
 //     {type:'points', userId, points, daily, level} — (v3.5) điểm vừa đổi
 //     {type:'awarded', room, fromName, toId, toName, amount} — (v3.5) vừa có người được thưởng điểm
-//     {type:'rooms', rooms:[{room,label,id}]}            — danh sách phòng đầy đủ
-//     {type:'room-state', room, label, members, messages, loto} — khi vào phòng (50 tin gần nhất + vòng Lô Tô hiện tại)
+//     {type:'rooms', rooms:[{room,label,id,limit}]}      — danh sách phòng đầy đủ (limit = giới hạn thành viên, 0 = không giới hạn)
+//     {type:'room-state', room, label, members, messages, loto, limit} — khi vào phòng (50 tin gần nhất + vòng Lô Tô hiện tại)
 //     {type:'message', room, msg:{id,userId,name,rank,text,time}}
 //     {type:'presence', room, members:[{id,name,rank}]} — gồm cả bot {id,name,rank,gender,bot:true}
 //     tin nhắn bot có thêm bot:true + gender; bot tự nói mỗi ~10s/phòng
@@ -499,6 +504,7 @@ const roomsByCreator = new Map(); // userId -> count
 //                                          (người thật + bot), phát cho mọi máy khi có
 //                                          người vào/ra/tạo/xóa phòng (v3.4)
 //     {type:'rank-changed', userId, name, rank} — vừa có người được cấp/gỡ áo (v3.4)
+//     {type:'room-limit', room, limit}  — (v3.8) giới hạn thành viên của phòng vừa đổi (0 = không giới hạn)
 //     {type:'loto-state', room, state}   — trạng thái vòng Lô Tô (null khi chưa có vòng)
 //     {type:'loto-called', room, number} — số vừa kêu (ai cũng nhận, kể cả máy chủ vòng)
 //     {type:'loto-kinh', room, winner}   — có người KINH, vòng kết thúc
@@ -521,13 +527,21 @@ const WS_HISTORY = 50;
 const customRooms = new Map();
 let nextRoomId = 104;
 
+// Giới hạn thành viên thật mỗi phòng (v3.8): slug -> số nguyên 1-500.
+// Không có trong Map = không giới hạn (đặt 0 là xóa khỏi Map). Bot không
+// tính vào giới hạn; 1 người mở nhiều máy chỉ tính 1.
+const MAX_ROOM_LIMIT = 500;
+const roomLimits = new Map();
+
 // ---- Phòng tự tạo: lưu/khôi phục qua Postgres (v3.6) ----------------------
 // Ảnh chụp phòng tự tạo để lưu vào bảng kv (key "rooms"):
-// { customRooms: [{room, id, label, createdBy}], byCreator: {userId: count} }.
+// { customRooms: [{room, id, label, createdBy}], byCreator: {userId: count},
+//   limits: {slug: limit} } (limits từ v3.8; bản lưu cũ chưa có -> {}).
 function roomsSnapshot() {
   return {
     customRooms: [...customRooms].map(([room, r]) => ({ room, id: r.id, label: r.label, createdBy: r.createdBy })),
     byCreator: Object.fromEntries(roomsByCreator),
+    limits: Object.fromEntries(roomLimits),
   };
 }
 function persistRooms() {
@@ -562,6 +576,13 @@ function restoreRooms(saved) {
     for (const r of customRooms.values()) {
       if (r.createdBy) roomsByCreator.set(r.createdBy, (roomsByCreator.get(r.createdBy) || 0) + 1);
     }
+  }
+  // Giới hạn thành viên/phòng (v3.8): chỉ nhận phòng còn tồn tại (phòng
+  // mặc định + phòng tự tạo vừa khôi phục ở trên) và số nguyên 1-500.
+  const limits = saved?.limits && typeof saved.limits === 'object' ? saved.limits : {};
+  for (const [slug, n] of Object.entries(limits)) {
+    const lim = Number(n);
+    if (ROOM_LABELS[slug] && Number.isInteger(lim) && lim >= 1 && lim <= MAX_ROOM_LIMIT) roomLimits.set(slug, lim);
   }
   return restored;
 }
@@ -804,8 +825,8 @@ function lotoFinish(roomName, state, winner) {
   lotoBroadcast(roomName);
 }
 function allRooms() {
-  const list = DEFAULT_ROOM_ORDER.map((room) => ({ room, label: ROOM_LABELS[room], id: DEFAULT_ROOM_IDS[room] }));
-  for (const [room, r] of customRooms) list.push({ room, label: r.label, id: r.id });
+  const list = DEFAULT_ROOM_ORDER.map((room) => ({ room, label: ROOM_LABELS[room], id: DEFAULT_ROOM_IDS[room], limit: roomLimits.get(room) || 0 }));
+  for (const [room, r] of customRooms) list.push({ room, label: r.label, id: r.id, limit: roomLimits.get(room) || 0 });
   return list;
 }
 
@@ -853,6 +874,7 @@ function wsJoinRoom(ws, roomName) {
     type: 'room-state', room: roomName, label: roomLabelOf(roomName),
     members: membersOf(roomName), messages: messagesOf(roomName),
     loto: lotoPublic(lotoStateOf(roomName)),
+    limit: roomLimits.get(roomName) || 0,
   });
   wsBroadcastPresence(roomName);
   wsBroadcastRoomCounts();
@@ -912,6 +934,17 @@ wss.on('connection', (ws) => {
       case 'join': {
         const roomName = ROOMS[String(msg.room ?? '').toLowerCase()];
         if (!roomName) return wsSend(ws, { type: 'error', code: 'bad-room', message: 'Phòng không hợp lệ.' });
+        // Giới hạn thành viên (v3.8): đếm người thật khác nhau đang trong
+        // phòng (membersMapOf chỉ chứa người thật, 1 người nhiều máy là 1
+        // mục conns — bot không nằm trong này). Phòng đầy và người này
+        // chưa có trong phòng -> từ chối, giữ nguyên phòng cũ của socket.
+        const limit = roomLimits.get(roomName) || 0;
+        if (limit > 0) {
+          const m = membersMapOf(roomName);
+          if (!m.has(ws.user.sub) && m.size >= limit) {
+            return wsSend(ws, { type: 'error', code: 'room-full', message: `Phòng đã đủ số thành viên (giới hạn ${limit}).` });
+          }
+        }
         wsJoinRoom(ws, roomName);
         break;
       }
@@ -972,10 +1005,29 @@ wss.on('connection', (ws) => {
         roomMessages.delete(roomName);
         roomMembers.delete(roomName);
         lotoByRoom.delete(roomName);
+        roomLimits.delete(roomName);
         persistRooms();
         wsBroadcastAll({ type: 'rooms', rooms: allRooms() });
         wsBroadcastRoomCounts();
         wsBroadcast(roomName, { type: 'room-closed', room: roomName });
+        break;
+      }
+      case 'set-room-limit': {
+        // Giới hạn thành viên/phòng (v3.8): QTV/BĐH đặt số người thật tối
+        // đa cho 1 phòng (0-500; 0 = bỏ giới hạn). Hạ giới hạn xuống dưới
+        // số người hiện tại thì không đá ai ra — chỉ chặn người vào mới
+        // (kiểm tra lúc join). Lưu ngay như tạo/xóa phòng (persistRooms).
+        if (!MANAGER_RANKS.has(ws.user.rank)) return wsSend(ws, { type: 'error', code: 'forbidden', message: 'Chỉ QTV/BĐH mới đặt được giới hạn thành viên phòng.' });
+        const roomName = ROOMS[String(msg.room ?? '').toLowerCase()];
+        if (!roomName) return wsSend(ws, { type: 'error', code: 'bad-room', message: 'Phòng không hợp lệ.' });
+        const limit = Number(msg.limit);
+        if (!Number.isInteger(limit) || limit < 0 || limit > MAX_ROOM_LIMIT) {
+          return wsSend(ws, { type: 'error', code: 'bad-limit', message: `Giới hạn thành viên phải là số nguyên 0-${MAX_ROOM_LIMIT} (0 = không giới hạn).` });
+        }
+        if (limit > 0) roomLimits.set(roomName, limit);
+        else roomLimits.delete(roomName);
+        persistRooms();
+        wsBroadcastAll({ type: 'room-limit', room: roomName, limit });
         break;
       }
       case 'set-rank': {
@@ -1232,7 +1284,7 @@ const server = http.createServer(async (req, res) => {
     // GET /rooms — danh sách phòng.
     if (req.method === 'GET' && url.pathname === '/rooms') {
       return send(res, 200, {
-        rooms: Object.entries(ROOM_LABELS).map(([name, label]) => ({ room: name, label })),
+        rooms: Object.entries(ROOM_LABELS).map(([name, label]) => ({ room: name, label, limit: roomLimits.get(name) || 0 })),
       });
     }
 

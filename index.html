@@ -3150,7 +3150,12 @@
           var demoLim = parseInt(($("rmLimit") ? $("rmLimit").value : "0"), 10);
           if(isNaN(demoLim) || demoLim < 0) demoLim = 0;
           if(demoLim > ROOM_LIMIT_MAX) demoLim = ROOM_LIMIT_MAX;
-          var nr = { id:id, name:name, logo:null, commentCooldown: parseInt(($("rmCooldown") ? $("rmCooldown").value : "0"), 10) || 0, limit: demoLim, members:[ mkMember("BĐH " + name, true, "BĐH") ], messages:[ {type:"sys", text:"Sảnh \"" + name + "\" vừa được tạo. Chào mừng mọi người!"} ], unread:0, stage:null, queue:[], queueClosed:false };
+          /* Sảnh mới tạo bắt đầu TRỐNG — không seed sẵn thành viên BĐH
+             nào (trước đây có mkMember("BĐH " + name, ..., "BĐH") khiến
+             phòng mới nào cũng có sẵn 1 áo đen BĐH). Người tạo vào phòng
+             thì moveUserTo tự thêm; bot thường (cấp thành viên) vẫn có
+             thể vào sau qua botJoinLeaveTick như các phòng khác. */
+          var nr = { id:id, name:name, logo:null, commentCooldown: parseInt(($("rmCooldown") ? $("rmCooldown").value : "0"), 10) || 0, limit: demoLim, members:[], messages:[ {type:"sys", text:"Sảnh \"" + name + "\" vừa được tạo. Chào mừng mọi người!"} ], unread:0, stage:null, queue:[], queueClosed:false };
           /* Demo: lưu giới hạn local theo phòng như panel Cài đặt phòng */
           saveRoomLimitLocal(id, demoLim);
           rooms.push(nr);
